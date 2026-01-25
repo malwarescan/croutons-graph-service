@@ -5,6 +5,7 @@
   "main": "server.js",
   "type": "commonjs",
   "scripts": {
+    "build": "npm install",
     "prestart": "node migrate.js",
     "start": "node server.js"
   },
