@@ -973,6 +973,121 @@ app.get("/admin/ingestion/recent", async (req, res) => {
   }
 });
 
+// GET /api/verified-domains - Stats for verified domains dashboard
+app.get("/api/verified-domains", async (req, res) => {
+  try {
+    const { rows } = await pool.query(
+      `WITH domain_stats AS (
+        SELECT 
+          vd.domain,
+          vd.verified_at,
+          vd.created_at as verification_initiated,
+          vd.updated_at as last_verification_update,
+          
+          -- Markdown versions stats
+          COUNT(DISTINCT mv.id) FILTER (WHERE mv.is_active = true) as active_markdown_count,
+          COUNT(DISTINCT mv.id) as total_markdown_versions,
+          MAX(mv.generated_at) FILTER (WHERE mv.is_active = true) as latest_markdown_generated,
+          
+          -- Discovered pages stats
+          COUNT(DISTINCT dp.id) FILTER (WHERE dp.is_active = true) as active_pages_count,
+          MAX(dp.last_scanned_at) as last_page_scan,
+          MAX(dp.discovered_at) as latest_page_discovery,
+          
+          -- Croutons stats from source participation
+          COALESCE(sp.crouton_count, 0) as crouton_count,
+          sp.markdown_exposed,
+          sp.discovery_methods,
+          sp.last_seen
+          
+        FROM verified_domains vd
+        
+        LEFT JOIN markdown_versions mv 
+          ON vd.domain = mv.domain
+        
+        LEFT JOIN discovered_pages dp 
+          ON vd.domain = dp.domain
+        
+        LEFT JOIN (
+          SELECT 
+            source_domain,
+            COUNT(*) as crouton_count,
+            BOOL_OR(ai_readable_source) as markdown_exposed,
+            ARRAY_AGG(DISTINCT discovery_method) FILTER (WHERE discovery_method IS NOT NULL) as discovery_methods,
+            MAX(last_verified) as last_seen
+          FROM source_tracking.source_participation
+          GROUP BY source_domain
+        ) sp ON vd.domain = sp.source_domain
+        
+        WHERE vd.verified_at IS NOT NULL
+        GROUP BY vd.domain, vd.verified_at, vd.created_at, vd.updated_at, 
+                 sp.crouton_count, sp.markdown_exposed, sp.discovery_methods, sp.last_seen
+      )
+      SELECT 
+        domain,
+        verified_at,
+        verification_initiated,
+        last_verification_update,
+        active_markdown_count,
+        total_markdown_versions,
+        latest_markdown_generated,
+        active_pages_count,
+        last_page_scan,
+        latest_page_discovery,
+        crouton_count,
+        markdown_exposed,
+        discovery_methods,
+        last_seen,
+        
+        -- Health indicators
+        CASE 
+          WHEN active_markdown_count > 0 THEN 'healthy'
+          WHEN total_markdown_versions > 0 THEN 'degraded'
+          ELSE 'inactive'
+        END as health_status,
+        
+        -- Days since last activity
+        EXTRACT(DAY FROM NOW() - GREATEST(
+          COALESCE(latest_markdown_generated, '1970-01-01'::timestamptz),
+          COALESCE(last_page_scan, '1970-01-01'::timestamptz),
+          COALESCE(last_seen, '1970-01-01'::timestamptz)
+        )) as days_since_activity
+        
+      FROM domain_stats
+      ORDER BY verified_at DESC, crouton_count DESC`,
+      []
+    );
+    
+    const data = rows.map(row => ({
+      domain: row.domain,
+      verified_at: row.verified_at,
+      verification_initiated: row.verification_initiated,
+      last_verification_update: row.last_verification_update,
+      markdown: {
+        active_count: parseInt(row.active_markdown_count) || 0,
+        total_versions: parseInt(row.total_markdown_versions) || 0,
+        latest_generated: row.latest_markdown_generated,
+        exposed: row.markdown_exposed || false
+      },
+      pages: {
+        active_count: parseInt(row.active_pages_count) || 0,
+        last_scan: row.last_page_scan,
+        latest_discovery: row.latest_page_discovery
+      },
+      crouton_count: parseInt(row.crouton_count) || 0,
+      discovery_methods: row.discovery_methods || [],
+      last_seen: row.last_seen,
+      health_status: row.health_status,
+      days_since_activity: parseInt(row.days_since_activity) || 0
+    }));
+    
+    res.json({ ok: true, data, count: data.length });
+  } catch (error) {
+    console.error('[verified-domains] Error:', error);
+    res.status(500).json({ ok: false, error: error.message });
+  }
+});
+
 // GET /api/source-stats - Derived dataset for AI-readable sources
 app.get("/api/source-stats", async (req, res) => {
   try {
