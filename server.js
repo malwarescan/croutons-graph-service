@@ -994,11 +994,9 @@ app.get("/api/verified-domains", async (req, res) => {
           MAX(dp.last_scanned_at) as last_page_scan,
           MAX(dp.discovered_at) as latest_page_discovery,
           
-          -- Croutons stats from source participation
-          COALESCE(sp.crouton_count, 0) as crouton_count,
-          sp.markdown_exposed,
-          sp.discovery_methods,
-          sp.last_seen
+          -- Croutons stats directly from croutons table
+          COUNT(DISTINCT c.id) as crouton_count,
+          MAX(c.created_at) as last_crouton_created
           
         FROM verified_domains vd
         
@@ -1008,20 +1006,11 @@ app.get("/api/verified-domains", async (req, res) => {
         LEFT JOIN discovered_pages dp 
           ON vd.domain = dp.domain
         
-        LEFT JOIN (
-          SELECT 
-            source_domain,
-            COUNT(*) as crouton_count,
-            BOOL_OR(ai_readable_source) as markdown_exposed,
-            ARRAY_AGG(DISTINCT discovery_method) FILTER (WHERE discovery_method IS NOT NULL) as discovery_methods,
-            MAX(last_verified) as last_seen
-          FROM source_tracking.source_participation
-          GROUP BY source_domain
-        ) sp ON vd.domain = sp.source_domain
+        LEFT JOIN croutons c
+          ON c.source_url LIKE '%' || vd.domain || '%'
         
         WHERE vd.verified_at IS NOT NULL
-        GROUP BY vd.domain, vd.verified_at, vd.created_at, vd.updated_at, 
-                 sp.crouton_count, sp.markdown_exposed, sp.discovery_methods, sp.last_seen
+        GROUP BY vd.domain, vd.verified_at, vd.created_at, vd.updated_at
       )
       SELECT 
         domain,
@@ -1035,9 +1024,7 @@ app.get("/api/verified-domains", async (req, res) => {
         last_page_scan,
         latest_page_discovery,
         crouton_count,
-        markdown_exposed,
-        discovery_methods,
-        last_seen,
+        last_crouton_created as last_seen,
         
         -- Health indicators
         CASE 
@@ -1050,7 +1037,7 @@ app.get("/api/verified-domains", async (req, res) => {
         EXTRACT(DAY FROM NOW() - GREATEST(
           COALESCE(latest_markdown_generated, '1970-01-01'::timestamptz),
           COALESCE(last_page_scan, '1970-01-01'::timestamptz),
-          COALESCE(last_seen, '1970-01-01'::timestamptz)
+          COALESCE(last_crouton_created, '1970-01-01'::timestamptz)
         )) as days_since_activity
         
       FROM domain_stats
@@ -1067,7 +1054,7 @@ app.get("/api/verified-domains", async (req, res) => {
         active_count: parseInt(row.active_markdown_count) || 0,
         total_versions: parseInt(row.total_markdown_versions) || 0,
         latest_generated: row.latest_markdown_generated,
-        exposed: row.markdown_exposed || false
+        exposed: parseInt(row.active_markdown_count) > 0
       },
       pages: {
         active_count: parseInt(row.active_pages_count) || 0,
@@ -1075,7 +1062,7 @@ app.get("/api/verified-domains", async (req, res) => {
         latest_discovery: row.latest_page_discovery
       },
       crouton_count: parseInt(row.crouton_count) || 0,
-      discovery_methods: row.discovery_methods || [],
+      discovery_methods: [],
       last_seen: row.last_seen,
       health_status: row.health_status,
       days_since_activity: parseInt(row.days_since_activity) || 0
