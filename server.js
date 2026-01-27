@@ -1079,15 +1079,47 @@ app.get("/api/verified-domains", async (req, res) => {
 app.get("/api/source-stats", async (req, res) => {
   try {
     const { rows } = await pool.query(
-      `SELECT 
-         source_domain as domain,
-         COUNT(*) as crouton_count,
-         BOOL_OR(ai_readable_source) as markdown,
-         ARRAY_AGG(DISTINCT discovery_method) as discovery_methods,
-         MAX(last_verified) as last_seen
-       FROM source_tracking.source_participation
-       GROUP BY source_domain
-       ORDER BY crouton_count DESC`,
+      `WITH domain_extraction AS (
+        SELECT 
+          -- Extract domain from source_url
+          CASE 
+            WHEN source_url ~ '^https?://' THEN 
+              regexp_replace(
+                regexp_replace(source_url, '^https?://', ''),
+                '/.*$', ''
+              )
+            ELSE NULL
+          END as domain,
+          id,
+          created_at
+        FROM croutons
+        WHERE source_url IS NOT NULL
+      ),
+      domain_stats AS (
+        SELECT 
+          de.domain,
+          COUNT(DISTINCT de.id) as crouton_count,
+          MAX(de.created_at) as last_seen,
+          -- Check if markdown exists for this domain
+          BOOL_OR(mv.id IS NOT NULL) as has_markdown,
+          BOOL_OR(mv.is_active = true) as has_active_markdown
+        FROM domain_extraction de
+        LEFT JOIN markdown_versions mv ON de.domain = mv.domain
+        WHERE de.domain IS NOT NULL AND de.domain != ''
+        GROUP BY de.domain
+      )
+      SELECT 
+        domain,
+        crouton_count,
+        COALESCE(has_active_markdown, false) as markdown,
+        CASE 
+          WHEN has_markdown THEN ARRAY['alternate_link']::text[]
+          ELSE ARRAY[]::text[]
+        END as discovery_methods,
+        last_seen
+      FROM domain_stats
+      WHERE crouton_count > 0
+      ORDER BY crouton_count DESC`,
       []
     );
     
@@ -1095,7 +1127,7 @@ app.get("/api/source-stats", async (req, res) => {
       domain: row.domain,
       crouton_count: parseInt(row.crouton_count),
       markdown: row.markdown,
-      discovery_methods: row.discovery_methods,
+      discovery_methods: row.discovery_methods || [],
       last_seen: row.last_seen
     }));
     
