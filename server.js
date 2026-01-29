@@ -3,6 +3,7 @@
 require("dotenv").config();
 
 const express = require("express");
+const rateLimit = require("express-rate-limit");
 const crypto = require("crypto");
 const path = require("path");
 const { Pool } = require("pg");
@@ -80,6 +81,15 @@ function setNdjsonHeaders(res, noCache, body) {
 
 const ndjsonBody = express.text({ type: "*/*", limit: "5mb" });
 app.disable("x-powered-by");
+
+// Rate limiting for API and diagnostic endpoints
+const apiLimiter = rateLimit({
+  windowMs: 60 * 1000, // 1 minute
+  max: 120, // 120 requests per minute per IP
+  message: { ok: false, error: 'Too many requests, please try again later' },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
 
 // ===== Satellite Ingestion API (CLI) - Must be before express.json() =====
 // POST /v1/streams/ingest
@@ -749,7 +759,7 @@ app.post("/api/test", (_req, res) => res.json({ ok: true, message: "POST routes 
 app.post("/v1/test", (_req, res) => res.json({ ok: true, message: "POST v1 routes working" }));
 
 // ===== DB Diagnostics =====
-app.get("/diag/db", async (_req, res) => {
+app.get("/diag/db", apiLimiter, async (_req, res) => {
   try {
     const r = await pool.query("SELECT now(), current_database()");
     res.json({ ok: true, result: r.rows[0] });
@@ -759,7 +769,7 @@ app.get("/diag/db", async (_req, res) => {
 });
 
 // ===== Stats =====
-app.get("/diag/stats", async (_req, res) => {
+app.get("/diag/stats", apiLimiter, async (_req, res) => {
   try {
     // Use v_counts view if available, fallback to direct queries
     try {
@@ -974,7 +984,7 @@ app.get("/admin/ingestion/recent", async (req, res) => {
 });
 
 // GET /api/verified-domains - Stats for verified domains dashboard
-app.get("/api/verified-domains", async (req, res) => {
+app.get("/api/verified-domains", apiLimiter, async (req, res) => {
   try {
     const { rows } = await pool.query(
       `WITH domain_stats AS (
@@ -1076,7 +1086,7 @@ app.get("/api/verified-domains", async (req, res) => {
 });
 
 // GET /api/urls - List URLs from html_snapshots for per-URL verification
-app.get("/api/urls", async (req, res) => {
+app.get("/api/urls", apiLimiter, async (req, res) => {
   try {
     const { domain } = req.query;
     
@@ -1112,7 +1122,7 @@ app.get("/api/urls", async (req, res) => {
 });
 
 // GET /api/source-stats - Derived dataset for AI-readable sources
-app.get("/api/source-stats", async (req, res) => {
+app.get("/api/source-stats", apiLimiter, async (req, res) => {
   try {
     const { rows } = await pool.query(
       `WITH domain_extraction AS (
