@@ -85,6 +85,12 @@
               class="font-mono text-sm uppercase tracking-wider touch-manipulation py-2">
               AI-Readable Sources
             </button>
+            <button
+              @click="tab='urls'"
+              :class="tab==='urls' ? 'font-bold text-[#00C2FF] border-b-2 border-[#00C2FF] pb-2 -mb-[2px] px-4' : 'text-[#6B6B6B] hover:text-[#0A0A0A] px-4 transition-colors duration-200'"
+              class="font-mono text-sm uppercase tracking-wider touch-manipulation py-2">
+              URL Verification
+            </button>
           </div>
         </div>
 
@@ -267,6 +273,160 @@
           </div>
         </div>
 
+        <!-- URL Verification Tab -->
+        <div v-if="tab==='urls'" class="mt-6">
+          <div class="border-2 border-[#0A0A0A] p-4 md:p-8 rounded-lg">
+            <div class="flex flex-col md:flex-row md:items-end gap-4 mb-6">
+              <div class="w-full md:w-96">
+                <label class="text-sm font-mono text-[#6B6B6B] mb-2 block">Select Domain</label>
+                <select
+                  class="w-full px-4 py-2 border-2 border-[#0A0A0A] rounded font-mono"
+                  :value="urlVerification.selectedDomain"
+                  @change="loadUrlsForDomain($event.target.value)">
+                  <option value="">Choose domain…</option>
+                  <option v-for="d in verified.data" :key="d.domain" :value="d.domain">
+                    {{ d.domain }} ({{ d.health_status }})
+                  </option>
+                </select>
+              </div>
+
+              <div class="flex gap-3">
+                <button
+                  @click="loadUrlsForDomain(urlVerification.selectedDomain)"
+                  :disabled="!urlVerification.selectedDomain || urlVerification.urls.loading"
+                  class="px-6 py-2 bg-[#0A0A0A] text-white font-medium hover:bg-[#00C2FF] rounded">
+                  {{ urlVerification.urls.loading ? 'Loading…' : 'Refresh URLs' }}
+                </button>
+              </div>
+            </div>
+
+            <div v-if="urlVerification.urls.error" class="border-2 border-[#EF4444] p-3 rounded mb-4 font-mono text-xs">
+              {{ urlVerification.urls.error }}
+            </div>
+
+            <div v-if="urlVerification.urls.data.length === 0" class="font-mono text-sm text-[#6B6B6B]">
+              No URLs loaded yet. Select a domain.
+            </div>
+
+            <div v-if="urlVerification.urls.data.length > 0" class="overflow-x-auto border-2 border-[#0A0A0A] rounded-lg">
+              <table class="w-full border-collapse text-xs sm:text-sm">
+                <thead>
+                  <tr>
+                    <th class="border-b-2 border-[#0A0A0A] p-3 text-left">URL</th>
+                    <th class="border-b-2 border-[#0A0A0A] p-3 text-left">Last Fetched</th>
+                    <th class="border-b-2 border-[#0A0A0A] p-3 text-left">Extract Hash</th>
+                    <th class="border-b-2 border-[#0A0A0A] p-3 text-left">Method</th>
+                    <th class="border-b-2 border-[#0A0A0A] p-3 text-left">Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr v-for="row in urlVerification.urls.data" :key="row.source_url">
+                    <td class="border-b border-[#0A0A0A]/20 p-3 font-mono text-xs">
+                      <a :href="row.source_url" target="_blank" class="underline hover:text-[#00C2FF]">
+                        {{ row.source_url }}
+                      </a>
+                    </td>
+                    <td class="border-b border-[#0A0A0A]/20 p-3 font-mono text-xs">{{ formatDate(row.fetched_at) }}</td>
+                    <td class="border-b border-[#0A0A0A]/20 p-3 font-mono text-xs">
+                      {{ (row.extraction_text_hash || '').slice(0, 8) }}{{ row.extraction_text_hash ? '…' : '—' }}
+                    </td>
+                    <td class="border-b border-[#0A0A0A]/20 p-3 font-mono text-xs">{{ row.extraction_method || '—' }}</td>
+                    <td class="border-b border-[#0A0A0A]/20 p-3">
+                      <div class="flex gap-2">
+                        <button
+                          @click="runProofBundle(urlVerification.selectedDomain, row.source_url)"
+                          :disabled="urlVerification.proof.loading"
+                          class="px-4 py-2 bg-[#0A0A0A] text-white font-medium hover:bg-[#00C2FF] rounded">
+                          {{ urlVerification.proof.loading ? 'Verifying…' : 'Verify' }}
+                        </button>
+                        <a
+                          class="px-4 py-2 border-2 border-[#0A0A0A] font-medium hover:bg-[#F8F8F8] rounded"
+                          :href="'https://md.croutons.ai/' + urlVerification.selectedDomain + '/' + mirrorPathFrom(row.source_url)"
+                          target="_blank">
+                          Mirror
+                        </a>
+                      </div>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+
+            <div class="mt-6 font-mono text-xs text-[#6B6B6B]">
+              Quick links:
+              <span v-if="urlVerification.selectedDomain">
+                <a class="underline hover:text-[#00C2FF]" :href="'https://precogs.croutons.ai/v1/status/' + urlVerification.selectedDomain" target="_blank">status</a>
+                ·
+                <a class="underline hover:text-[#00C2FF]" :href="'https://precogs.croutons.ai/v1/extract/' + urlVerification.selectedDomain + '?url=' + encodeURIComponent('https://' + urlVerification.selectedDomain + '/')" target="_blank">extract</a>
+                ·
+                <a class="underline hover:text-[#00C2FF]" :href="'https://precogs.croutons.ai/v1/graph/' + urlVerification.selectedDomain + '.jsonld'" target="_blank">graph</a>
+              </span>
+            </div>
+          </div>
+
+          <!-- Proof Modal -->
+          <div v-if="urlVerification.proof.show" class="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
+            <div class="bg-white max-w-5xl w-full max-h-[90vh] overflow-y-auto border-4 border-[#0A0A0A] p-6 md:p-8 rounded">
+              <div class="flex items-start justify-between gap-4 mb-4">
+                <div>
+                  <div class="text-xl font-bold">Proof Bundle</div>
+                  <div class="font-mono text-xs text-[#6B6B6B] break-all">
+                    {{ urlVerification.proof.data?.domain }} · {{ urlVerification.proof.data?.source_url }}
+                  </div>
+                </div>
+                <button @click="urlVerification.proof.show=false" class="px-4 py-2 border-2 border-[#0A0A0A] font-medium hover:bg-[#F8F8F8] rounded">
+                  Close
+                </button>
+              </div>
+
+              <div v-if="urlVerification.proof.error" class="border-2 border-[#EF4444] p-3 rounded mb-4 font-mono text-xs">
+                {{ urlVerification.proof.error }}
+              </div>
+
+              <div v-if="urlVerification.proof.data" class="mb-4">
+                <div class="text-lg font-bold"
+                     :class="urlVerification.proof.data.result.citation_grade_pass ? 'text-[#25D366]' : 'text-[#EF4444]'">
+                  {{ urlVerification.proof.data.result.citation_grade_pass ? 'CITATION-GRADE PASS' : 'CITATION-GRADE FAIL' }}
+                </div>
+                <div class="font-mono text-xs"
+                     :class="urlVerification.proof.data.result.full_protocol_pass ? 'text-[#25D366]' : 'text-[#6B6B6B]'">
+                  {{ urlVerification.proof.data.result.full_protocol_pass ? 'FULL PROTOCOL PASS' : 'FULL PROTOCOL: NOT YET' }}
+                </div>
+              </div>
+
+              <div class="flex flex-wrap gap-3 mb-4">
+                <button @click="copyProofBundle" class="px-5 py-2 bg-[#0A0A0A] text-white font-medium hover:bg-[#00C2FF] rounded">
+                  Copy JSON
+                </button>
+                <button @click="downloadProofBundle" class="px-5 py-2 bg-[#0A0A0A] text-white font-medium hover:bg-[#00C2FF] rounded">
+                  Download JSON
+                </button>
+                <a v-if="urlVerification.proof.data?.mirror?.url"
+                   class="px-5 py-2 border-2 border-[#0A0A0A] font-medium hover:bg-[#F8F8F8] rounded"
+                   :href="urlVerification.proof.data.mirror.url"
+                   target="_blank">
+                  Open Mirror
+                </a>
+              </div>
+
+              <pre class="bg-[#F8F8F8] p-4 rounded font-mono text-xs overflow-x-auto">
+{{ JSON.stringify(urlVerification.proof.data, null, 2) }}
+              </pre>
+            </div>
+          </div>
+
+          <!-- Toast -->
+          <div v-if="urlVerification.toast.show"
+               class="fixed bottom-4 right-4 z-50 border-2 border-[#0A0A0A] bg-white px-4 py-3 rounded shadow font-mono text-xs"
+               :class="{
+                 'border-[#25D366]': urlVerification.toast.kind==='ok',
+                 'border-[#FF9500]': urlVerification.toast.kind==='warn',
+                 'border-[#EF4444]': urlVerification.toast.kind==='error'
+               }">
+            {{ urlVerification.toast.message }}
+          </div>
+        </div>
+
         <footer class="text-sm text-[#6B6B6B] font-mono text-center mt-8">
           Croutons ingestion and verification dashboard. Data updates on refresh.
         </footer>
@@ -310,6 +470,12 @@
             error: null,
             data: [],
             lastUpdated: null
+          },
+          urlVerification: {
+            selectedDomain: '',
+            urls: { loading: false, data: [], error: null },
+            proof: { show: false, loading: false, data: null, error: null },
+            toast: { show: false, message: '', kind: 'info' }
           }
         }
       },
@@ -385,6 +551,214 @@
           } catch {
             return dateString;
           }
+        },
+        setToast(message, kind = 'info') {
+          this.urlVerification.toast = { show: true, message, kind };
+          setTimeout(() => { this.urlVerification.toast.show = false; }, 2200);
+        },
+        mirrorPathFrom(sourceUrl) {
+          try {
+            const u = new URL(sourceUrl);
+            let path = u.pathname || '/';
+            path = path.replace(/\/+$/, '/');
+            if (path === '/' || path === '') return 'index.md';
+            path = path.replace(/^\/+/, '').replace(/\/+$/, '');
+            return `${path}.md`;
+          } catch {
+            return 'index.md';
+          }
+        },
+        async fetchSafely(url, opts = {}) {
+          const res = await fetch(url, {
+            cache: 'no-store',
+            headers: { 'Accept': 'application/json', ...(opts.headers || {}) },
+            ...opts
+          });
+          const text = await res.text();
+          if (!res.ok) {
+            const err = new Error(`HTTP ${res.status} for ${url}`);
+            err.status = res.status;
+            err.body = text.slice(0, 1000);
+            throw err;
+          }
+          return { res, text };
+        },
+        parseNdjsonSafe(ndjsonText) {
+          const lines = (ndjsonText || '').split('\n').map(l => l.trim()).filter(Boolean);
+          const out = [];
+          for (const line of lines) {
+            try {
+              out.push(JSON.parse(line));
+            } catch {
+              // Skip bad lines
+            }
+          }
+          return out;
+        },
+        async loadUrlsForDomain(domain) {
+          const d = (domain || '').trim();
+          this.urlVerification.selectedDomain = d;
+          this.urlVerification.urls.loading = true;
+          this.urlVerification.urls.error = null;
+          this.urlVerification.urls.data = [];
+          try {
+            const { text } = await this.fetchSafely(`/api/urls?domain=${encodeURIComponent(d)}`, {
+              headers: { 'Accept': 'application/json' }
+            });
+            const payload = JSON.parse(text);
+            if (!payload?.ok) throw new Error(payload?.error || 'Failed to load URLs');
+            this.urlVerification.urls.data = payload.data || [];
+            this.setToast(`Loaded ${payload.count || this.urlVerification.urls.data.length} URLs`, 'ok');
+          } catch (e) {
+            this.urlVerification.urls.error = e.message;
+            this.setToast(`URLs load failed: ${e.message}`, 'error');
+          } finally {
+            this.urlVerification.urls.loading = false;
+          }
+        },
+        async runProofBundle(domain, url) {
+          const d = (domain || '').trim();
+          const u = (url || '').trim();
+          if (!d || !u) {
+            this.setToast('Select a domain and URL first', 'error');
+            return;
+          }
+
+          this.urlVerification.proof.loading = true;
+          this.urlVerification.proof.error = null;
+          this.urlVerification.proof.data = null;
+
+          try {
+            const statusUrl = `https://precogs.croutons.ai/v1/status/${encodeURIComponent(d)}`;
+            const extractUrl = `https://precogs.croutons.ai/v1/extract/${encodeURIComponent(d)}?url=${encodeURIComponent(u)}`;
+
+            const factsTextUrl =
+              `https://precogs.croutons.ai/v1/facts/${encodeURIComponent(d)}.ndjson` +
+              `?evidence_type=text_extraction&source_url=${encodeURIComponent(u)}`;
+
+            const factsStructuredUrl =
+              `https://precogs.croutons.ai/v1/facts/${encodeURIComponent(d)}.ndjson` +
+              `?evidence_type=structured_data&source_url=${encodeURIComponent(u)}`;
+
+            const mirrorPath = this.mirrorPathFrom(u);
+            const mirrorUrl = `https://md.croutons.ai/${encodeURIComponent(d)}/${mirrorPath}`;
+
+            const graphUrl = `https://precogs.croutons.ai/v1/graph/${encodeURIComponent(d)}.jsonld`;
+
+            const [statusRaw, extractRaw, factsTextRaw, factsStructRaw, mirrorRaw, graphRaw] = await Promise.all([
+              this.fetchSafely(statusUrl, { headers: { 'Accept': 'application/json' } }),
+              this.fetchSafely(extractUrl, { headers: { 'Accept': 'application/json' } }),
+              this.fetchSafely(factsTextUrl, { headers: { 'Accept': 'application/x-ndjson' } }),
+              this.fetchSafely(factsStructuredUrl, { headers: { 'Accept': 'application/x-ndjson' } }),
+              fetch(mirrorUrl, { cache: 'no-store' }).then(async r => ({ ok: r.ok, status: r.status, text: await r.text() })).catch(() => ({ ok: false, status: 0, text: '' })),
+              fetch(graphUrl, { cache: 'no-store' }).then(async r => ({ ok: r.ok, status: r.status, text: await r.text() })).catch(() => ({ ok: false, status: 0, text: '' }))
+            ]);
+
+            const status = JSON.parse(statusRaw.text);
+            const extract = JSON.parse(extractRaw.text);
+
+            const textFacts = this.parseNdjsonSafe(factsTextRaw.text);
+            const structuredFacts = this.parseNdjsonSafe(factsStructRaw.text);
+
+            const mirrorText = mirrorRaw.ok ? mirrorRaw.text : '';
+            let graph = null;
+            try { graph = graphRaw.ok ? JSON.parse(graphRaw.text) : null; } catch { graph = null; }
+
+            const citationGrade = Boolean(extract?.validation?.citation_grade);
+            const passRate = Number(extract?.validation?.pass_rate ?? 0);
+            const textCount = textFacts.length;
+
+            const citationPass = citationGrade && passRate >= 0.95 && textCount >= 1;
+
+            const mirrorHas11 =
+              mirrorText.includes('markdown_version: "1.1"') &&
+              mirrorText.includes('## Facts (Text Extraction) — Citation-Grade') &&
+              mirrorText.includes('## Metadata (Structured Data) — Not Anchorable');
+
+            const graphLen = Array.isArray(graph?.['@graph']) ? graph['@graph'].length : 0;
+
+            const fullProtocolPass =
+              status?.qa?.tier === 'full_protocol' &&
+              mirrorHas11 &&
+              graphLen > 0;
+
+            const bundle = {
+              domain: d,
+              source_url: u,
+              checked_at: new Date().toISOString(),
+              endpoints: {
+                status: statusUrl,
+                extract: extractUrl,
+                facts_text: factsTextUrl,
+                facts_structured: factsStructuredUrl,
+                mirror: mirrorUrl,
+                graph: graphUrl
+              },
+              status: {
+                qa: status?.qa || null,
+                versions: status?.versions || null,
+                counts: status?.counts || null
+              },
+              extract: {
+                extraction_text_hash: extract?.extraction_text_hash ?? null,
+                canonical_text_length: extract?.canonical_text_length ?? null,
+                validation: extract?.validation ?? null,
+                failed_examples: extract?.validation?.failed_examples ?? []
+              },
+              facts_counts: {
+                text_extraction: textFacts.length,
+                structured_data: structuredFacts.length
+              },
+              facts_text_extraction_sample: textFacts.slice(0, 5),
+              mirror: {
+                url: mirrorUrl,
+                ok: mirrorRaw.ok,
+                status: mirrorRaw.status,
+                has_v1_1: mirrorHas11
+              },
+              graph: {
+                ok: Boolean(graphRaw.ok),
+                graph_length: graphLen
+              },
+              result: {
+                citation_grade_pass: citationPass,
+                full_protocol_pass: fullProtocolPass
+              }
+            };
+
+            this.urlVerification.proof.data = bundle;
+            this.urlVerification.proof.show = true;
+            this.setToast(citationPass ? 'Citation-grade PASS' : 'Citation-grade FAIL', citationPass ? 'ok' : 'warn');
+          } catch (e) {
+            this.urlVerification.proof.error = `${e.message}${e.body ? ` | ${e.body}` : ''}`;
+            this.setToast(`Verify failed: ${e.message}`, 'error');
+          } finally {
+            this.urlVerification.proof.loading = false;
+          }
+        },
+        copyProofBundle() {
+          const data = this.urlVerification.proof.data;
+          if (!data) return;
+          const json = JSON.stringify(data, null, 2);
+          navigator.clipboard.writeText(json).then(
+            () => this.setToast('Proof bundle copied', 'ok'),
+            () => this.setToast('Clipboard copy failed', 'error')
+          );
+        },
+        downloadProofBundle() {
+          const data = this.urlVerification.proof.data;
+          if (!data) return;
+          const json = JSON.stringify(data, null, 2);
+          const blob = new Blob([json], { type: 'application/json' });
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = `proof-bundle-${data.domain}-${Date.now()}.json`;
+          document.body.appendChild(a);
+          a.click();
+          a.remove();
+          URL.revokeObjectURL(url);
+          this.setToast('Proof bundle downloaded', 'ok');
         }
       },
       mounted() {
