@@ -1075,6 +1075,42 @@ app.get("/api/verified-domains", async (req, res) => {
   }
 });
 
+// GET /api/urls - List URLs from html_snapshots for per-URL verification
+app.get("/api/urls", async (req, res) => {
+  try {
+    const { domain } = req.query;
+    
+    if (!domain) {
+      return res.status(400).json({ ok: false, error: 'Domain required' });
+    }
+    
+    // DISTINCT ON with deterministic tie-breaker (id DESC prevents flicker)
+    const query = `
+      SELECT DISTINCT ON (source_url)
+        source_url,
+        fetched_at,
+        extraction_text_hash,
+        extraction_method
+      FROM public.html_snapshots
+      WHERE domain = $1
+      ORDER BY source_url, fetched_at DESC, id DESC
+    `;
+    
+    const result = await pool.query(query, [domain]);
+    
+    res.json({
+      ok: true,
+      domain,
+      count: result.rows.length,
+      data: result.rows
+    });
+    
+  } catch (error) {
+    console.error('[api/urls] Error:', error);
+    res.status(500).json({ ok: false, error: error.message });
+  }
+});
+
 // GET /api/source-stats - Derived dataset for AI-readable sources
 app.get("/api/source-stats", async (req, res) => {
   try {
