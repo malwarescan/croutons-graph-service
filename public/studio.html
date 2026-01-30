@@ -850,29 +850,50 @@
             
             const generated = data.content;
             
-            console.log('[generateAndApply] Generated content:', {
-              title: generated.title,
-              thesis: generated.thesis,
-              answerBox: generated.answerBox?.substring(0, 50),
-              keyFactsLines: generated.keyFacts?.split('\n').length,
-              sectionsCount: generated.sections?.length,
-              faqCount: generated.faq?.length
-            });
+            console.log('[generateAndApply] Generated content:', JSON.stringify(generated, null, 2));
             
-            // Apply directly to form with forced reactivity
-            this.simpleData = {
-              title: generated.title || '',
-              thesis: generated.thesis || '',
-              answerBox: generated.answerBox || '',
-              keyFacts: generated.keyFacts || '',
-              sections: generated.sections ? JSON.parse(JSON.stringify(generated.sections)) : [],
-              structuredAsset: generated.structuredAsset || '',
-              implications: generated.implications || '',
-              nextActions: generated.nextActions || '',
-              first30Min: generated.first30Min || '',
-              relatedResources: generated.relatedResources || '',
-              faq: generated.faq ? JSON.parse(JSON.stringify(generated.faq)) : []
-            };
+            // Apply each field individually with Vue reactivity
+            this.simpleData.title = generated.title || '';
+            this.simpleData.thesis = generated.thesis || '';
+            this.simpleData.answerBox = generated.answerBox || '';
+            this.simpleData.keyFacts = generated.keyFacts || '';
+            this.simpleData.structuredAsset = generated.structuredAsset || '';
+            this.simpleData.implications = generated.implications || '';
+            this.simpleData.nextActions = generated.nextActions || '';
+            this.simpleData.first30Min = generated.first30Min || '';
+            this.simpleData.relatedResources = generated.relatedResources || '';
+            
+            // Clear and repopulate sections array
+            this.simpleData.sections.splice(0);
+            if (generated.sections && generated.sections.length > 0) {
+              generated.sections.forEach(section => {
+                this.simpleData.sections.push({
+                  heading: section.heading || '',
+                  content: section.content || ''
+                });
+              });
+            } else {
+              // Add default empty sections
+              for (let i = 0; i < 3; i++) {
+                this.simpleData.sections.push({ heading: '', content: '' });
+              }
+            }
+            
+            // Clear and repopulate FAQ array
+            this.simpleData.faq.splice(0);
+            if (generated.faq && generated.faq.length > 0) {
+              generated.faq.forEach(qa => {
+                this.simpleData.faq.push({
+                  question: qa.question || '',
+                  answer: qa.answer || ''
+                });
+              });
+            } else {
+              // Add default empty FAQs
+              for (let i = 0; i < 3; i++) {
+                this.simpleData.faq.push({ question: '', answer: '' });
+              }
+            }
             
             // Update page type
             this.currentPage.page_type = this.aiPrompt.contentType || 'blog';
@@ -886,13 +907,18 @@
               this.currentPage.path = `/blog/${slug}`;
             }
             
-            console.log('[generateAndApply] simpleData after update:', {
+            console.log('[generateAndApply] Form updated:', {
               title: this.simpleData.title,
+              thesis: this.simpleData.thesis,
+              answerBoxLength: this.simpleData.answerBox.length,
+              keyFactsLength: this.simpleData.keyFacts.length,
               sectionsCount: this.simpleData.sections.length,
               faqCount: this.simpleData.faq.length
             });
             
-            alert(`Content generated!\n\nTitle: ${this.simpleData.title}\n${this.simpleData.sections.length} sections\n${this.simpleData.faq.length} FAQs\n\nScroll down to review.`);
+            const summary = `Generated content:\n\nTitle: ${this.simpleData.title}\nSections: ${this.simpleData.sections.length}\nFAQs: ${this.simpleData.faq.length}\n\nCheck the form below!`;
+            console.log(summary);
+            alert(summary);
             
             // Scroll to show the filled form
             setTimeout(() => {
