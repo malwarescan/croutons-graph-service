@@ -148,45 +148,51 @@
         </div>
 
         <!-- CROUTONIZER SCORE -->
-        <div class="bg-gradient-to-r from-[#00C2FF] to-[#0A0A0A] text-white p-8 rounded-lg text-center mb-6">
-          <div class="text-sm font-bold uppercase tracking-wider mb-2">
-            {{ croutonizerScore.total ? 'Croutonizer Score' : 'LLM Readiness Score' }}
-          </div>
-          <div class="text-6xl font-bold mb-2">{{ croutonizerScore.total || Math.round((checklistScore / 12) * 100) }}%</div>
-          <div class="text-sm opacity-90">
-            {{ getScoreStatus(croutonizerScore.total || Math.round((checklistScore / 12) * 100)) }}
-          </div>
-          <div v-if="croutonizerScore.status" class="mt-2 text-xs opacity-80">
-            Status: {{ croutonizerScore.status.toUpperCase() }}
-            <span v-if="croutonizerScore.blocking_issues > 0" class="ml-2 text-[#EF4444]">
-              {{ croutonizerScore.blocking_issues }} BLOCKING
-            </span>
-          </div>
-          <div class="mt-4 pt-4 border-t border-white/20 flex justify-around text-xs">
-            <div>
-              <div class="font-bold text-2xl">{{ keyFactsCount }}</div>
-              <div class="opacity-75">Facts</div>
+        <div class="bg-white border-2 border-[#0A0A0A] p-8 shadow-[8px_8px_0px_0px_rgba(10,10,10,0.1)] mb-6">
+          <div class="text-center mb-6">
+            <div class="text-sm font-bold uppercase tracking-wider text-[#6B6B6B] mb-2">
+              {{ croutonizerScore.total ? 'CROUTONIZER SCORE' : 'LLM READINESS SCORE' }}
             </div>
-            <div>
-              <div class="font-bold text-2xl">{{ answerBoxWordCount }}</div>
-              <div class="opacity-75">Answer Box Words</div>
+            <div class="text-6xl font-bold text-[#0A0A0A] mb-2">
+              {{ croutonizerScore.total || Math.round((checklistScore / 12) * 100) }}%
             </div>
-            <div>
-              <div class="font-bold text-2xl">{{ simpleData.sections.length }}</div>
-              <div class="opacity-75">Sections</div>
+            <div class="text-sm font-medium text-[#0A0A0A]">
+              {{ getScoreStatus(croutonizerScore.total || Math.round((checklistScore / 12) * 100)) }}
+            </div>
+            <div v-if="croutonizerScore.status" class="mt-3 text-xs text-[#6B6B6B]">
+              STATUS: {{ croutonizerScore.status.toUpperCase() }}
+              <span v-if="croutonizerScore.blocking_issues > 0" class="ml-2 text-[#EF4444] font-bold">
+                {{ croutonizerScore.blocking_issues }} BLOCKING
+              </span>
             </div>
           </div>
+          
+          <div class="grid grid-cols-3 gap-4 mb-6 pb-6 border-b-2 border-[#E5E5E5]">
+            <div class="text-center">
+              <div class="text-2xl font-bold text-[#0A0A0A]">{{ keyFactsCount }}</div>
+              <div class="text-xs text-[#6B6B6B] uppercase tracking-wide">Facts</div>
+            </div>
+            <div class="text-center">
+              <div class="text-2xl font-bold text-[#0A0A0A]">{{ answerBoxWordCount }}</div>
+              <div class="text-xs text-[#6B6B6B] uppercase tracking-wide">Words</div>
+            </div>
+            <div class="text-center">
+              <div class="text-2xl font-bold text-[#0A0A0A]">{{ simpleData.sections.length }}</div>
+              <div class="text-xs text-[#6B6B6B] uppercase tracking-wide">Sections</div>
+            </div>
+          </div>
+          
           <button @click="runCroutonizer" 
                   :disabled="croutonizing"
-                  class="mt-4 px-6 py-3 bg-[#0A0A0A] text-white font-medium uppercase tracking-wide disabled:opacity-50">
+                  class="w-full px-6 py-3 bg-[#0A0A0A] text-white font-medium uppercase tracking-wide disabled:opacity-50">
             {{ croutonizing ? 'ANALYZING...' : 'RUN SEMANTIC COMPILER' }}
           </button>
         </div>
 
         <!-- CROUTONIZER ISSUES -->
-        <div v-if="croutonizerIssues.length > 0" class="bg-white border-2 border-[#FF3B30] p-6 mb-6">
+        <div v-if="croutonizerIssues.length > 0" class="bg-white border-2 border-[#EF4444] p-6 mb-6 shadow-[4px_4px_0px_0px_rgba(239,68,68,0.2)]">
           <h3 class="text-xl font-bold text-[#0A0A0A] mb-4">
-            🔧 {{ croutonizerIssues.length }} Issues Found
+            {{ croutonizerIssues.length }} ISSUES FOUND
           </h3>
           <div v-for="issue in croutonizerIssues.slice(0, 5)" :key="issue.id" 
                class="mb-4 p-4 border-l-4 bg-gray-50"
