@@ -424,10 +424,10 @@
                     class="flex-1 px-8 py-4 bg-[#0A0A0A] text-white font-medium uppercase tracking-wide disabled:opacity-50">
               {{ saving ? 'SAVING...' : 'SAVE CONTENT' }}
             </button>
-            <button @click="viewCompliance" 
-                    :disabled="!currentPage.id"
+            <button @click="runCroutonizerFromButton" 
+                    :disabled="croutonizing || !currentPage.id"
                     class="flex-1 px-8 py-4 bg-[#00C2FF] text-[#0A0A0A] border-2 border-[#00C2FF] font-medium uppercase tracking-wide disabled:opacity-50">
-              CHECK COMPLIANCE
+              {{ croutonizing ? 'ANALYZING...' : 'RUN COMPILER' }}
             </button>
           </div>
           
@@ -641,13 +641,23 @@
             this.croutonizerScore = data.score;
             this.croutonizerIssues = data.issues || [];
             
-            alert(`Croutonizer Score: ${data.score.total}%\n\nFound ${data.issues.length} issues`);
+            // Scroll to results
+            setTimeout(() => {
+              window.scrollTo({ top: 0, behavior: 'smooth' });
+            }, 100);
             
           } catch (error) {
             console.error('Croutonizer error:', error);
             alert('Failed to run Croutonizer: ' + error.message);
           } finally {
             this.croutonizing = false;
+          }
+        },
+        async runCroutonizerFromButton() {
+          // Save first, then run
+          await this.saveSimplePage();
+          if (this.currentPage.id) {
+            await this.runCroutonizer();
           }
         },
         setApiKey() {
