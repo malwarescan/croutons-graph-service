@@ -205,7 +205,8 @@
         </div>
 
         <!-- CROUTONIZER PANEL (Real-Time Semantic Compiler) -->
-        <div class="bg-white border-4 border-[#0A0A0A] p-6 neo-card-sm mb-6" style="background-image: repeating-linear-gradient(45deg, transparent, transparent 10px, rgba(0,0,0,0.02) 10px, rgba(0,0,0,0.02) 20px);">
+        <div v-if="simpleData.title && simpleData.answerBox && simpleData.sections.some(s => s.content)"
+             class="bg-white border-4 border-[#0A0A0A] p-6 neo-card-sm mb-6" style="background-image: repeating-linear-gradient(45deg, transparent, transparent 10px, rgba(0,0,0,0.02) 10px, rgba(0,0,0,0.02) 20px);">
           <div class="flex items-center justify-between mb-6">
             <h2 class="text-2xl font-bold">CROUTONIZER SCORE</h2>
             <div class="text-6xl font-bold">
