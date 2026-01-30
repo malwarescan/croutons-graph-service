@@ -981,7 +981,26 @@
             }
 
             const data = await res.json();
+            console.log('[generateContentAI] Received from API:', data);
+            
+            if (!data.content) {
+              throw new Error('No content received from API');
+            }
+            
             this.aiGenerated = data.content;
+            console.log('[generateContentAI] aiGenerated set to:', this.aiGenerated);
+            
+            // Verify all expected fields are present
+            const missingFields = [];
+            ['title', 'thesis', 'answerBox', 'keyFacts', 'sections', 'faq'].forEach(field => {
+              if (!this.aiGenerated[field]) {
+                missingFields.push(field);
+              }
+            });
+            
+            if (missingFields.length > 0) {
+              console.warn('[generateContentAI] Missing fields:', missingFields);
+            }
             
             // Scroll to preview
             setTimeout(() => {
@@ -999,18 +1018,41 @@
           }
         },
         applyAIContent() {
-          // Apply all AI-generated content to the form
+          console.log('[applyAIContent] Starting to apply content...', this.aiGenerated);
+          
+          // Apply all AI-generated content to the form with proper reactivity
           this.simpleData.title = this.aiGenerated.title || '';
           this.simpleData.thesis = this.aiGenerated.thesis || '';
           this.simpleData.answerBox = this.aiGenerated.answerBox || '';
           this.simpleData.keyFacts = this.aiGenerated.keyFacts || '';
-          this.simpleData.sections = this.aiGenerated.sections || [];
+          
+          // Handle sections array (force reactivity)
+          if (this.aiGenerated.sections && Array.isArray(this.aiGenerated.sections)) {
+            this.simpleData.sections = [...this.aiGenerated.sections];
+          } else {
+            this.simpleData.sections = [
+              { heading: '', content: '' },
+              { heading: '', content: '' },
+              { heading: '', content: '' }
+            ];
+          }
+          
           this.simpleData.structuredAsset = this.aiGenerated.structuredAsset || '';
           this.simpleData.implications = this.aiGenerated.implications || '';
           this.simpleData.nextActions = this.aiGenerated.nextActions || '';
           this.simpleData.first30Min = this.aiGenerated.first30Min || '';
           this.simpleData.relatedResources = this.aiGenerated.relatedResources || '';
-          this.simpleData.faq = this.aiGenerated.faq || [];
+          
+          // Handle FAQ array (force reactivity)
+          if (this.aiGenerated.faq && Array.isArray(this.aiGenerated.faq)) {
+            this.simpleData.faq = [...this.aiGenerated.faq];
+          } else {
+            this.simpleData.faq = [
+              { question: '', answer: '' },
+              { question: '', answer: '' },
+              { question: '', answer: '' }
+            ];
+          }
           
           // Update page type if different
           this.currentPage.page_type = this.aiPrompt.contentType;
@@ -1023,6 +1065,8 @@
               .replace(/^-|-$/g, '');
             this.currentPage.path = `/blog/${slug}`;
           }
+          
+          console.log('[applyAIContent] Content applied:', this.simpleData);
           
           // Close AI wizard and scroll to form
           this.showAIWizard = false;

@@ -73,30 +73,40 @@ Generate complete content following the 12-point AEO/GEO checklist. Be specific,
 
     const content = JSON.parse(completion.choices[0].message.content);
     
+    console.log('[content-generator] Raw AI response:', JSON.stringify(content, null, 2));
+    
     // Validate required fields
     if (!content.title || !content.answerBox || !content.keyFacts) {
+      console.error('[content-generator] Missing required fields:', { 
+        hasTitle: !!content.title, 
+        hasAnswerBox: !!content.answerBox, 
+        hasKeyFacts: !!content.keyFacts 
+      });
       throw new Error('Generated content missing required fields');
     }
     
     // Ensure sections is an array
     if (!Array.isArray(content.sections)) {
+      console.log('[content-generator] sections not array, converting');
       content.sections = [];
     }
     
     // Ensure FAQ is an array
     if (!Array.isArray(content.faq)) {
+      console.log('[content-generator] faq not array, converting');
       content.faq = [];
     }
     
     // Ensure minimum section count
     if (content.sections.length < 3) {
-      // Add default sections based on content type
+      console.log('[content-generator] Adding default sections, current count:', content.sections.length);
       const defaultSections = getDefaultSections(contentType);
       content.sections = [...content.sections, ...defaultSections].slice(0, 5);
     }
     
     // Ensure minimum FAQ count
     if (content.faq.length < 3) {
+      console.log('[content-generator] Adding default FAQs, current count:', content.faq.length);
       content.faq = [
         ...content.faq,
         { question: '', answer: '' },
@@ -104,6 +114,28 @@ Generate complete content following the 12-point AEO/GEO checklist. Be specific,
         { question: '', answer: '' }
       ].slice(0, 4);
     }
+    
+    // Ensure all optional fields have defaults
+    content.structuredAsset = content.structuredAsset || '';
+    content.implications = content.implications || '';
+    content.nextActions = content.nextActions || '';
+    content.first30Min = content.first30Min || '';
+    content.relatedResources = content.relatedResources || '';
+    content.thesis = content.thesis || '';
+    
+    console.log('[content-generator] Final content structure:', {
+      hasTitle: !!content.title,
+      hasThesis: !!content.thesis,
+      hasAnswerBox: !!content.answerBox,
+      hasKeyFacts: !!content.keyFacts,
+      sectionsCount: content.sections?.length || 0,
+      faqCount: content.faq?.length || 0,
+      hasStructuredAsset: !!content.structuredAsset,
+      hasImplications: !!content.implications,
+      hasNextActions: !!content.nextActions,
+      hasFirst30Min: !!content.first30Min,
+      hasRelatedResources: !!content.relatedResources
+    });
     
     return content;
     
