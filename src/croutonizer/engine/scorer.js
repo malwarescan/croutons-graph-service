@@ -5,6 +5,8 @@
 const { calculateSectionAnchoringScore } = require('../rules/sectionAnchoring');
 const { calculateEntityPersistenceScore } = require('../rules/entityPersistence');
 const { calculateClaimEvidenceScore } = require('../rules/claimEvidence');
+const { calculateHeaderSpecificityScore } = require('../rules/headerSpecificity');
+const { calculateFactDensityScore } = require('../rules/factDensity');
 const { determineStatus, getBlockingIssues } = require('./linter');
 
 /**
@@ -15,12 +17,14 @@ const { determineStatus, getBlockingIssues } = require('./linter');
  * @returns {Object} Score with breakdown
  */
 function calculateScore(ast, issues, keyFacts = []) {
+  const extractedFacts = ast.facts || [];
+  
   const breakdown = {
     sectionAnchoring: calculateSectionAnchoringScore(ast.sections, issues),
     entityPersistence: calculateEntityPersistenceScore(ast.sections, issues),
     claimEvidence: calculateClaimEvidenceScore(ast, keyFacts, issues),
-    headerSpecificity: calculateHeaderScore(ast.sections, issues),
-    factDensity: calculateDensityScore(ast, issues),
+    headerSpecificity: calculateHeaderSpecificityScore(ast.sections, issues),
+    factDensity: calculateFactDensityScore(ast, extractedFacts, issues),
     factQuality: calculateQualityScore(ast, issues)
   };
   
@@ -39,51 +43,7 @@ function calculateScore(ast, issues, keyFacts = []) {
   };
 }
 
-// Claim-Evidence scoring is now imported from claimEvidence.js rule
-
-/**
- * Calculate Header Specificity score (Rule D)
- * Placeholder until Rule D is implemented
- */
-function calculateHeaderScore(sections, issues) {
-  // TODO: Implement when Rule D is ready
-  const headerIssues = issues.filter(i => i.rule === 'headerSpecificity');
-  
-  if (headerIssues.length === 0) {
-    return { score: 15, max: 15, issues: 0 };
-  }
-  
-  const warningCount = headerIssues.filter(i => i.type === 'warning').length;
-  const score = Math.max(0, 15 - (warningCount * 2));
-  
-  return {
-    score,
-    max: 15,
-    issues: headerIssues.length
-  };
-}
-
-/**
- * Calculate Fact Density score (Rule E)
- * Placeholder until Rule E is implemented
- */
-function calculateDensityScore(ast, issues) {
-  // TODO: Implement when Rule E is ready
-  const densityIssues = issues.filter(i => i.rule === 'factDensity');
-  
-  if (densityIssues.length === 0) {
-    return { score: 15, max: 15, issues: 0 };
-  }
-  
-  const warningCount = densityIssues.filter(i => i.type === 'warning').length;
-  const score = Math.max(0, 15 - (warningCount * 2));
-  
-  return {
-    score,
-    max: 15,
-    issues: densityIssues.length
-  };
-}
+// Rules D & E scoring now imported from their respective modules
 
 /**
  * Calculate Fact Quality score (Rule F)

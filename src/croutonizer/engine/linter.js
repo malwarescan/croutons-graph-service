@@ -5,6 +5,8 @@
 const { checkSectionAnchoring } = require('../rules/sectionAnchoring');
 const { checkEntityPersistence } = require('../rules/entityPersistence');
 const { checkClaimEvidence } = require('../rules/claimEvidence');
+const { checkHeaderSpecificity } = require('../rules/headerSpecificity');
+const { checkFactDensity } = require('../rules/factDensity');
 const { extractEntities } = require('./parser');
 
 /**
@@ -42,7 +44,15 @@ async function runLinter(ast, keyFacts = []) {
   const claimIssues = checkClaimEvidence(ast, keyFacts);
   issues.push(...claimIssues);
   
-  // TODO: Add Rules D, E when implemented
+  // Run Rule D: Header Specificity
+  const headerIssues = checkHeaderSpecificity(ast.sections);
+  issues.push(...headerIssues);
+  
+  // Run Rule E: Fact Density
+  // Note: Uses extracted facts from AST if available
+  const extractedFacts = ast.facts || [];
+  const densityIssues = checkFactDensity(ast, extractedFacts);
+  issues.push(...densityIssues);
   
   return issues;
 }
