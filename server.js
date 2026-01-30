@@ -1184,21 +1184,6 @@ app.get("/api/source-stats", apiLimiter, async (req, res) => {
   }
 });
 
-// ===== Static Files =====
-app.use(
-  express.static(path.join(__dirname, "public"), {
-    etag: true,
-    setHeaders(res, filePath) {
-      res.setHeader(
-        "Cache-Control",
-        filePath.endsWith(".html")
-          ? "no-store, no-cache, must-revalidate, max-age=0"
-          : "public, max-age=300, stale-while-revalidate=60"
-      );
-    },
-  })
-);
-
 // ===== Studio API (Page Compliance Studio) =====
 const studio = require('./src/studio/api');
 
@@ -1225,6 +1210,21 @@ app.get("/studio", (_req, res) =>
   res.sendFile(path.join(__dirname, "public", "studio.html"))
 );
 app.get("/", (_req, res) => res.redirect("/dashboard"));
+
+// ===== Static Files =====
+app.use(
+  express.static(path.join(__dirname, "public"), {
+    etag: true,
+    setHeaders(res, filePath) {
+      res.setHeader(
+        "Cache-Control",
+        filePath.endsWith(".html")
+          ? "no-store, no-cache, must-revalidate, max-age=0"
+          : "public, max-age=300, stale-while-revalidate=60"
+      );
+    },
+  })
+);
 
 // ===== Boot =====
 app.listen(PORT, () => {
