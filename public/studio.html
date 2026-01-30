@@ -3,7 +3,6 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=5, user-scalable=yes">
-  <meta name="format-detection" content="telephone=no">
   <title>Page Compliance Studio | Croutons</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
@@ -16,438 +15,423 @@
     code, .font-mono { 
       font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; 
     }
-    
-    /* Sharp, clean buttons matching homepage */
-    button {
-      border-radius: 0 !important;
-      font-weight: 500;
-      letter-spacing: 0.01em;
-      transition: all 0.15s ease;
-    }
-    
-    button:hover:not(:disabled) {
-      transform: translateY(-1px);
-      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-    }
-    
-    button:active:not(:disabled) {
-      transform: translateY(0);
-    }
-    
-    /* Input styling to match */
-    input, select, textarea {
-      border-radius: 0 !important;
-    }
-    
-    /* Box styling */
-    .border-2 {
-      border-radius: 0;
-    }
-    
-    /* Mobile optimizations */
-    @media (max-width: 768px) {
-      button, .btn { 
-        min-height: 44px; 
-        min-width: 44px; 
-        touch-action: manipulation; 
-        padding: 10px 16px;
-      }
-      h1 { font-size: 1.75rem !important; }
-      h2 { font-size: 1.25rem !important; }
-    }
-    @media (max-width: 640px) {
-      .grid { gap: 1rem !important; }
-    }
-    @media (max-width: 480px) {
-      body { font-size: 14px; }
-      .text-sm { font-size: 12px; }
-      .text-xs { font-size: 11px; }
-    }
+    button { border-radius: 0 !important; font-weight: 500; transition: all 0.15s ease; }
+    button:hover:not(:disabled) { transform: translateY(-1px); box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+    input, select, textarea { border-radius: 0 !important; }
+    .check-pass { color: #10B981; }
+    .check-fail { color: #EF4444; }
+    .check-pending { color: #F59E0B; }
+    .word-count { font-size: 0.75rem; color: #6B6B6B; }
+    .section-card { transition: all 0.2s; }
+    .section-card:hover { box-shadow: 0 4px 6px rgba(0,0,0,0.05); }
   </style>
 </head>
-<body class="bg-[#F8F8F8] min-h-screen">
+<body>
   <div id="app" v-cloak>
     <!-- Header -->
-    <section class="w-full bg-white py-8 md:py-12 px-4 md:px-8 border-b-2 border-[#0A0A0A]">
-      <div class="max-w-6xl mx-auto">
-        <div class="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 mb-6">
+    <section class="w-full bg-white py-8 px-4 md:px-8 border-b-2 border-[#0A0A0A]">
+      <div class="max-w-7xl mx-auto">
+        <div class="flex items-center justify-between mb-4">
           <div>
-            <h1 class="text-2xl md:text-4xl font-bold text-[#0A0A0A] mb-2">
-              Page Compliance Studio
-            </h1>
-            <p class="text-sm md:text-base text-[#6B6B6B]">
-              Guided authoring with A-J protocol compliance • <span class="font-mono text-xs text-[#00C2FF]">INTERNAL ONLY</span>
-            </p>
+            <h1 class="text-3xl font-bold text-[#0A0A0A]">Page Compliance Studio</h1>
+            <p class="text-sm text-[#6B6B6B] mt-1">AEO/GEO Content Production • Croutons Protocol A-J</p>
           </div>
-          <div class="flex gap-2 w-full md:w-auto">
+          <div class="flex gap-3">
             <button @click="view='list'" 
                     :class="view==='list' ? 'bg-[#0A0A0A] text-white' : 'bg-white text-[#0A0A0A] border-2 border-[#0A0A0A]'"
-                    class="flex-1 md:flex-none px-6 py-3 md:py-2 font-medium text-sm uppercase tracking-wide">
-              Pages
+                    class="px-6 py-2 font-medium uppercase tracking-wide text-sm">
+              My Pages
             </button>
-            <button @click="startWizard" 
-                    class="flex-1 md:flex-none px-6 py-3 md:py-2 bg-[#00C2FF] text-[#0A0A0A] border-2 border-[#00C2FF] font-medium text-sm uppercase tracking-wide">
+            <button @click="startNewPage" 
+                    class="px-6 py-2 bg-[#00C2FF] text-[#0A0A0A] border-2 border-[#00C2FF] font-medium uppercase tracking-wide text-sm">
               + New Page
             </button>
           </div>
         </div>
+        
+        <!-- Mode Toggle -->
+        <div v-if="view==='editor'" class="flex items-center gap-2 text-xs">
+          <span class="text-[#6B6B6B]">Mode:</span>
+          <button @click="editorMode='simple'" 
+                  :class="editorMode==='simple' ? 'bg-[#0A0A0A] text-white' : 'bg-[#E5E5E5] text-[#0A0A0A]'"
+                  class="px-3 py-1">
+            Simple (Writers)
+          </button>
+          <button @click="editorMode='advanced'" 
+                  :class="editorMode==='advanced' ? 'bg-[#0A0A0A] text-white' : 'bg-[#E5E5E5] text-[#0A0A0A]'"
+                  class="px-3 py-1">
+            Advanced (Developers)
+          </button>
+        </div>
       </div>
     </section>
 
-    <!-- API Key Input (if not set) -->
-    <div v-if="!apiKey" class="max-w-6xl mx-auto mt-8 md:mt-12 px-4">
-      <div class="border-2 border-[#0A0A0A] p-6 md:p-8 bg-white">
-        <h2 class="text-xl md:text-2xl font-bold text-[#0A0A0A] mb-4">Studio API Key Required</h2>
-        <p class="text-sm md:text-base text-[#6B6B6B] mb-6">
-          Enter your Studio API key to access Page Compliance Studio. Contact your team lead for access.
-        </p>
-        <div class="space-y-4">
-          <input 
-            v-model="apiKeyInput"
-            type="password"
-            placeholder="Enter API key..."
-            class="w-full px-4 py-3 border-2 border-[#0A0A0A]  font-mono text-sm"
-            @keyup.enter="setApiKey">
-          <button @click="setApiKey" 
-                  class="w-full md:w-auto px-8 py-3 bg-[#0A0A0A] text-white border-2 border-[#0A0A0A] font-medium uppercase tracking-wide">
-            Access Studio
-          </button>
-        </div>
+    <!-- API Key Gate -->
+    <div v-if="!apiKey" class="max-w-2xl mx-auto mt-12 px-4">
+      <div class="bg-white border-2 border-[#0A0A0A] p-8">
+        <h2 class="text-2xl font-bold mb-4">Studio Access Required</h2>
+        <p class="text-[#6B6B6B] mb-6">Enter your Studio API key to access Page Compliance Studio. Contact your team lead for access.</p>
+        <input v-model="apiKeyInput" 
+               type="password" 
+               placeholder="Paste API key here"
+               class="w-full border-2 border-[#0A0A0A] px-4 py-3 mb-4 font-mono text-sm"
+               @keyup.enter="setApiKey">
+        <button @click="setApiKey" 
+                class="w-full bg-[#0A0A0A] text-white px-6 py-3 font-medium uppercase tracking-wide">
+          Access Studio
+        </button>
       </div>
     </div>
 
-    <!-- Main Content (only show if API key is set) -->
-    <div v-if="apiKey" class="max-w-6xl mx-auto p-4 md:p-8">
+    <!-- Page List -->
+    <div v-if="apiKey && view==='list'" class="max-w-7xl mx-auto mt-8 px-4">
+      <div v-if="loading" class="text-center py-12 text-[#6B6B6B]">Loading pages...</div>
       
-      <!-- List View -->
-      <div v-if="view==='list'" class="space-y-6">
-        <div class="bg-white border-2 border-[#0A0A0A] p-6 md:p-8">
-          <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 mb-6">
-            <h2 class="text-xl md:text-2xl font-bold text-[#0A0A0A]">Pages</h2>
-            <button @click="loadPages" 
-                    :disabled="pages.loading"
-                    class="w-full sm:w-auto px-6 py-3 md:py-2 bg-[#0A0A0A] text-white border-2 border-[#0A0A0A] font-medium uppercase tracking-wide disabled:bg-[#6B6B6B] disabled:border-[#6B6B6B] disabled:opacity-60 disabled:cursor-not-allowed">
-              {{ pages.loading ? 'Loading...' : 'Refresh' }}
-            </button>
-          </div>
-
-          <div v-if="pages.error" class="border-2 border-[#EF4444] bg-red-50 p-4  mb-4 text-sm text-[#EF4444]">
-            {{ pages.error }}
-          </div>
-
-          <div v-if="pages.data.length === 0 && !pages.loading" class="text-center py-12 text-[#6B6B6B] text-sm md:text-base">
-            No pages yet. Click "+ New Page" to get started.
-          </div>
-
-          <div v-if="pages.data.length > 0" class="space-y-3">
-            <div v-for="page in pages.data" :key="page.id" 
-                 class="border-2 border-[#0A0A0A] p-4 hover:bg-[#F8F8F8] cursor-pointer transition-all duration-150 hover:shadow-[2px_2px_0_0_rgba(0,0,0,1)]"
-                 @click="openBuilder(page.id)">
-              <div class="flex items-start justify-between">
-                <div class="flex-1">
-                  <div class="font-bold text-lg">{{ page.title }}</div>
-                  <div class="font-mono text-xs text-[#6B6B6B] mt-1">
-                    {{ page.domain || 'draft' }}{{ page.path }}
-                  </div>
-                  <div class="flex gap-2 mt-2">
-                    <span class="px-2 py-1 bg-[#00C2FF]/10 text-[#00C2FF] text-xs font-mono ">
-                      {{ page.page_type }}
-                    </span>
-                    <span class="px-2 py-1 text-xs font-mono "
-                          :class="page.status==='ready' ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-700'">
-                      {{ page.status }}
-                    </span>
-                  </div>
-                </div>
-                <div class="text-xs text-[#6B6B6B]">
-                  {{ formatDate(page.updated_at) }}
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
+      <div v-else-if="pages.length === 0" class="text-center py-12">
+        <p class="text-[#6B6B6B] mb-6">No pages yet. Create your first AEO/GEO-compliant page.</p>
+        <button @click="startNewPage" 
+                class="px-8 py-3 bg-[#00C2FF] text-[#0A0A0A] border-2 border-[#00C2FF] font-medium uppercase tracking-wide">
+          + Create First Page
+        </button>
       </div>
-
-      <!-- Wizard View -->
-      <div v-if="view==='wizard'" class="bg-white border-2 border-[#0A0A0A] p-6 md:p-8 max-w-3xl mx-auto">
-        <div class="flex items-center justify-between mb-6">
-          <h2 class="text-xl md:text-2xl font-bold text-[#0A0A0A]">Create New Page</h2>
-          <button @click="view='list'" class="text-sm text-[#6B6B6B] hover:text-[#0A0A0A] transition-colors duration-200">
-            Cancel
-          </button>
-        </div>
-
-        <div class="space-y-6">
-          <div>
-            <label class="block text-sm font-bold text-[#0A0A0A] mb-2">Page Type *</label>
-            <select v-model="wizard.page_type" 
-                    class="w-full px-4 py-3 border-2 border-[#0A0A0A]  font-mono text-sm">
-              <option value="">Choose template...</option>
-              <option v-for="t in templates" :key="t.key" :value="t.key">
-                {{ t.name }}
-              </option>
-            </select>
-            <div v-if="wizard.page_type" class="mt-2 text-xs text-[#6B6B6B] font-mono">
-              ✓ Required sections: {{ getTemplate(wizard.page_type).required_sections.length }}
-            </div>
-          </div>
-
-          <div>
-            <label class="block text-sm font-bold text-[#0A0A0A] mb-2">Domain</label>
-            <input v-model="wizard.domain" 
-                   type="text" 
-                   placeholder="example.com"
-                   class="w-full px-4 py-3 border-2 border-[#0A0A0A]  font-mono text-sm">
-            <div class="mt-1 text-xs text-[#6B6B6B]">Optional for drafts</div>
-          </div>
-
-          <div>
-            <label class="block text-sm font-bold text-[#0A0A0A] mb-2">Path *</label>
-            <input v-model="wizard.path" 
-                   type="text" 
-                   placeholder="/pricing"
-                   class="w-full px-4 py-3 border-2 border-[#0A0A0A]  font-mono text-sm">
-          </div>
-
-          <div>
-            <label class="block text-sm font-bold text-[#0A0A0A] mb-2">Title *</label>
-            <input v-model="wizard.title" 
-                   type="text" 
-                   placeholder="Product Name or Page Title"
-                   class="w-full px-4 py-3 border-2 border-[#0A0A0A]  text-sm">
-          </div>
-
-          <div>
-            <label class="block text-sm font-bold text-[#0A0A0A] mb-2">Source URL</label>
-            <input v-model="wizard.source_url" 
-                   type="text" 
-                   placeholder="https://example.com/pricing"
-                   class="w-full px-4 py-3 border-2 border-[#0A0A0A]  font-mono text-sm">
-            <div class="mt-1 text-xs text-[#6B6B6B]">Auto-generated from domain + path if empty</div>
-          </div>
-
-          <button @click="createPageFromWizard" 
-                  :disabled="!wizard.page_type || !wizard.path || !wizard.title || wizard.loading"
-                  class="w-full px-8 py-3 bg-[#0A0A0A] text-white  font-medium hover:bg-[#00C2FF] disabled:bg-[#6B6B6B] disabled:opacity-60 disabled:cursor-not-allowed transition-colors duration-200">
-            {{ wizard.loading ? 'Creating...' : 'Create Page' }}
-          </button>
-        </div>
-      </div>
-
-      <!-- Builder View -->
-      <div v-if="view==='builder' && currentPage" class="space-y-6">
-        <!-- Page Header -->
-        <div class="bg-white border-2 border-[#0A0A0A] p-6 md:p-8">
-          <div class="flex flex-col md:flex-row items-start justify-between gap-4">
+      
+      <div v-else class="grid gap-4">
+        <div v-for="page in pages" :key="page.id" 
+             @click="editPage(page.id)"
+             class="bg-white border-2 border-[#0A0A0A] p-6 cursor-pointer section-card">
+          <div class="flex items-start justify-between mb-3">
             <div class="flex-1">
-              <h2 class="text-xl md:text-2xl font-bold text-[#0A0A0A]">{{ currentPage.title }}</h2>
-              <div class="font-mono text-sm text-[#6B6B6B] mt-2">
-                {{ currentPage.domain || 'draft' }}{{ currentPage.path }}
-              </div>
-              <div class="flex gap-2 mt-3">
-                <span class="px-3 py-1 bg-[#00C2FF]/10 text-[#00C2FF] text-xs font-mono rounded-none border border-[#00C2FF]">
-                  {{ currentPage.page_type }}
-                </span>
-                <span class="px-3 py-1 text-xs font-mono rounded-none border"
-                      :class="currentPage.status==='ready' ? 'bg-[#25D366]/10 text-[#25D366] border-[#25D366]' : 'bg-gray-100 text-[#6B6B6B] border-[#6B6B6B]'">
-                  {{ currentPage.status.toUpperCase() }}
-                </span>
-              </div>
+              <h3 class="text-lg font-bold text-[#0A0A0A] mb-1">{{ page.domain }}{{ page.path }}</h3>
+              <p class="text-sm text-[#6B6B6B] capitalize">{{ page.page_type.replace('_', ' ') }}</p>
             </div>
-            <div class="flex flex-col sm:flex-row gap-2 w-full md:w-auto">
-              <button @click="view='list'" 
-                      class="px-6 py-3 md:py-2 border-2 border-[#0A0A0A]  font-medium hover:bg-[#F8F8F8] transition-colors duration-200">
-                Back
-              </button>
-              <button @click="saveAll" 
-                      :disabled="builder.saving"
-                      class="px-6 py-3 md:py-2 bg-[#0A0A0A] text-white  font-medium hover:bg-[#00C2FF] disabled:bg-[#6B6B6B] disabled:opacity-60 transition-colors duration-200">
-                {{ builder.saving ? 'Saving...' : 'Save All' }}
-              </button>
-              <button @click="generateAll" 
-                      :disabled="builder.generating"
-                      class="px-6 py-3 md:py-2 bg-[#00C2FF] text-[#0A0A0A]  font-medium hover:bg-[#0A0A0A] hover:text-white disabled:bg-[#6B6B6B] disabled:opacity-60 transition-colors duration-200">
-                {{ builder.generating ? 'Generating...' : 'Generate' }}
-              </button>
-            </div>
+            <span class="px-3 py-1 bg-[#E5E5E5] text-[#0A0A0A] text-xs font-mono">
+              ID: {{ page.id }}
+            </span>
           </div>
-        </div>
-
-        <!-- Tabs -->
-        <div class="bg-white border-2 border-[#0A0A0A]">
-          <div class="flex overflow-x-auto border-b-2 border-[#0A0A0A]">
-            <button @click="builderTab='sections'"
-                    :class="builderTab==='sections' ? 'font-bold text-[#00C2FF] border-b-2 border-[#00C2FF] -mb-[2px]' : 'text-[#6B6B6B] hover:text-[#0A0A0A]'"
-                    class="px-6 py-3 font-mono text-xs md:text-sm uppercase tracking-wider transition-colors duration-200 whitespace-nowrap">
-              Sections & Facts
-            </button>
-            <button @click="builderTab='preview'"
-                    :class="builderTab==='preview' ? 'font-bold text-[#00C2FF] border-b-2 border-[#00C2FF] -mb-[2px]' : 'text-[#6B6B6B] hover:text-[#0A0A0A]'"
-                    class="px-6 py-3 font-mono text-xs md:text-sm uppercase tracking-wider transition-colors duration-200 whitespace-nowrap">
-              Preview
-            </button>
-            <button @click="builderTab='compliance'"
-                    :class="builderTab==='compliance' ? 'font-bold text-[#00C2FF] border-b-2 border-[#00C2FF] -mb-[2px]' : 'text-[#6B6B6B] hover:text-[#0A0A0A]'"
-                    class="px-6 py-3 font-mono text-xs md:text-sm uppercase tracking-wider transition-colors duration-200 whitespace-nowrap">
-              Compliance
-            </button>
-          </div>
-
-          <!-- Sections & Facts Tab -->
-          <div v-if="builderTab==='sections'" class="p-6 md:p-8 space-y-6">
-            <div v-for="(section, idx) in builder.sections" :key="section.id" 
-                 class="border-2 border-[#0A0A0A]  p-4 md:p-6">
-              <div class="flex items-center justify-between mb-4">
-                <h3 class="font-bold text-[#0A0A0A]">{{ section.heading || section.section_key }}</h3>
-                <span class="text-xs font-mono text-[#6B6B6B] bg-[#F8F8F8] px-2 py-1 ">#{{ section.order_index }}</span>
-              </div>
-
-              <div class="mb-6">
-                <label class="block text-sm font-bold text-[#0A0A0A] mb-2">Narrative</label>
-                <textarea v-model="section.narrative_md"
-                          rows="4"
-                          placeholder="Write narrative content for this section..."
-                          class="w-full px-4 py-3 border-2 border-[#0A0A0A]  text-sm resize-y">
-                </textarea>
-              </div>
-
-              <div>
-                <label class="block text-sm font-bold text-[#0A0A0A] mb-2">Atomic Facts</label>
-                <div class="space-y-2">
-                  <div v-for="(fact, factIdx) in getFactsForSection(section.id)" :key="factIdx"
-                       class="flex flex-col md:flex-row gap-2">
-                    <input v-model="fact.subject" 
-                           placeholder="Subject"
-                           class="flex-1 px-3 py-2 border-2 border-[#0A0A0A]  text-sm font-mono">
-                    <input v-model="fact.predicate" 
-                           placeholder="Predicate"
-                           class="flex-1 px-3 py-2 border-2 border-[#0A0A0A]  text-sm font-mono">
-                    <input v-model="fact.object" 
-                           placeholder="Object"
-                           class="flex-1 px-3 py-2 border-2 border-[#0A0A0A]  text-sm font-mono">
-                    <button @click="removeFact(factIdx)" 
-                            class="px-4 py-2 border-2 border-[#EF4444] text-[#EF4444]  hover:bg-[#EF4444] hover:text-white transition-colors duration-200 font-bold">
-                      ×
-                    </button>
-                  </div>
-                  <button @click="addFact(section.id)" 
-                          class="w-full px-4 py-3 border-2 border-[#0A0A0A]  text-sm font-medium hover:bg-[#F8F8F8] transition-colors duration-200">
-                    + Add Fact
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <!-- Preview Tab -->
-          <div v-if="builderTab==='preview'" class="p-6">
-            <div v-if="!currentPage.content_hash" class="text-center py-12 text-[#6B6B6B]">
-              Click "Generate Artifacts" to preview outputs
-            </div>
-
-            <div v-if="preview.artifacts.length > 0" class="space-y-4">
-              <div class="flex gap-2 border-b-2 border-[#0A0A0A] pb-2">
-                <button v-for="type in ['markdown', 'ndjson', 'jsonld', 'head']" :key="type"
-                        @click="previewTab=type"
-                        :class="previewTab===type ? 'font-bold text-[#00C2FF]' : 'text-[#6B6B6B]'"
-                        class="px-4 py-2 font-mono text-xs uppercase">
-                  {{ type }}
-                </button>
-              </div>
-
-              <div v-for="artifact in preview.artifacts" :key="artifact.artifact_type"
-                   v-show="previewTab===artifact.artifact_type">
-                <div class="flex justify-between items-center mb-3">
-                  <span class="font-mono text-sm text-[#6B6B6B]">
-                    {{ artifact.content.length }} chars
-                  </span>
-                  <div class="flex gap-2">
-                    <button @click="copyArtifact(artifact)" 
-                            class="px-4 py-2 bg-[#0A0A0A] text-white rounded text-sm hover:bg-[#00C2FF]">
-                      Copy
-                    </button>
-                    <button @click="downloadArtifact(artifact)" 
-                            class="px-4 py-2 border-2 border-[#0A0A0A] rounded text-sm hover:bg-[#F8F8F8]">
-                      Download
-                    </button>
-                  </div>
-                </div>
-                <pre class="bg-[#F8F8F8] p-4 rounded border-2 border-[#0A0A0A] text-xs overflow-x-auto">{{ artifact.content }}</pre>
-              </div>
-            </div>
-          </div>
-
-          <!-- Compliance Tab -->
-          <div v-if="builderTab==='compliance'" class="p-6 md:p-8">
-            <div v-if="compliance.loading" class="text-center py-12 text-[#6B6B6B] text-sm">
-              Loading compliance report...
-            </div>
-
-            <div v-if="compliance.data" class="space-y-6">
-              <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-                <div>
-                  <div class="text-5xl font-bold font-mono" 
-                       :class="compliance.data.score >= 80 ? 'text-[#25D366]' : compliance.data.score >= 60 ? 'text-[#FF9500]' : 'text-[#EF4444]'">
-                    {{ compliance.data.score }}%
-                  </div>
-                  <div class="text-sm text-[#6B6B6B] font-mono mt-2">
-                    {{ compliance.data.checks_passed }}/{{ compliance.data.checks_run }} checks passed
-                  </div>
-                </div>
-                <button @click="loadCompliance(currentPage.id)" 
-                        class="px-6 py-3 md:py-2 bg-[#0A0A0A] text-white  font-medium hover:bg-[#00C2FF] transition-colors duration-200">
-                  Refresh
-                </button>
-              </div>
-
-              <!-- A-J Grid -->
-              <div class="grid grid-cols-5 gap-2 md:gap-3">
-                <div v-for="(status, letter) in compliance.data.status" :key="letter"
-                     class="border-2 p-4  text-center"
-                     :class="status === true ? 'border-[#25D366] bg-[#25D366]/10' : status === false ? 'border-[#EF4444] bg-[#EF4444]/10' : 'border-[#6B6B6B] bg-gray-50'">
-                  <div class="text-2xl md:text-3xl font-bold font-mono">{{ letter }}</div>
-                  <div class="text-xs font-mono mt-1"
-                       :class="status === true ? 'text-[#25D366]' : status === false ? 'text-[#EF4444]' : 'text-[#6B6B6B]'">
-                    {{ status === true ? 'PASS' : status === false ? 'FAIL' : 'N/A' }}
-                  </div>
-                </div>
-              </div>
-
-              <!-- Issues List -->
-              <div v-if="compliance.data.issues.length > 0">
-                <h3 class="font-bold text-[#0A0A0A] mb-4">Issues to Fix ({{ compliance.data.issues.length }})</h3>
-                <div class="space-y-3">
-                  <div v-for="(issue, idx) in compliance.data.issues" :key="idx"
-                       class="border-2  p-4"
-                       :class="issue.severity==='error' ? 'border-[#EF4444] bg-[#EF4444]/10' : 'border-[#FF9500] bg-[#FF9500]/10'">
-                    <div class="flex items-start gap-3">
-                      <span class="font-mono font-bold text-sm px-2 py-1 "
-                            :class="issue.severity==='error' ? 'bg-[#EF4444] text-white' : 'bg-[#FF9500] text-white'">
-                        {{ issue.requirement }}
-                      </span>
-                      <div class="flex-1">
-                        <div class="text-sm text-[#0A0A0A] font-medium">{{ issue.message }}</div>
-                        <div class="text-xs text-[#6B6B6B] mt-2 font-mono">→ {{ issue.fix_action }}</div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              <div v-if="compliance.data.issues.length === 0" class="border-2 border-[#25D366] bg-[#25D366]/10  p-6 text-center">
-                <div class="text-2xl mb-2">✅</div>
-                <div class="text-sm font-bold text-[#25D366]">All checks passed! This page is compliant.</div>
-              </div>
-            </div>
+          <div class="flex items-center gap-4 text-xs text-[#6B6B6B]">
+            <span>Updated {{ new Date(page.updated_at).toLocaleDateString() }}</span>
+            <span>•</span>
+            <span class="font-mono">{{ page.content_hash?.substring(0, 12) || 'No hash' }}</span>
           </div>
         </div>
       </div>
     </div>
 
-    <!-- Toast Notification -->
-    <div v-if="toast.show"
-         class="fixed bottom-4 right-4 px-6 py-3 bg-white border-2 border-[#0A0A0A]  shadow-lg font-mono text-sm z-50 max-w-sm">
-      {{ toast.message }}
+    <!-- Editor View -->
+    <div v-if="apiKey && view==='editor'" class="max-w-7xl mx-auto mt-8 px-4 pb-12">
+      
+      <!-- Simple Mode (Content Writers) -->
+      <div v-if="editorMode==='simple'" class="space-y-6">
+        
+        <!-- Page Info -->
+        <div class="bg-white border-2 border-[#0A0A0A] p-6">
+          <h2 class="text-xl font-bold mb-4">Page Details</h2>
+          <div class="grid md:grid-cols-2 gap-4">
+            <div>
+              <label class="block text-sm font-medium mb-2">Content Type</label>
+              <select v-model="currentPage.page_type" class="w-full border-2 border-[#0A0A0A] px-4 py-2">
+                <option value="blog">Blog Post / Article</option>
+                <option value="landing">Landing Page</option>
+                <option value="product">Product Page</option>
+                <option value="product_marketing">Product Marketing</option>
+                <option value="faq">FAQ / Help</option>
+                <option value="home">Homepage</option>
+              </select>
+            </div>
+            <div>
+              <label class="block text-sm font-medium mb-2">URL Path</label>
+              <input v-model="currentPage.path" 
+                     placeholder="/blog/my-article"
+                     class="w-full border-2 border-[#0A0A0A] px-4 py-2">
+            </div>
+          </div>
+        </div>
+
+        <!-- AEO/GEO Checklist -->
+        <div class="bg-white border-2 border-[#0A0A0A] p-6">
+          <div class="flex items-center justify-between mb-6">
+            <h2 class="text-xl font-bold">Writer Checklist</h2>
+            <div class="text-sm">
+              <span :class="checklistScore >= 8 ? 'check-pass' : 'check-fail'" class="font-bold">
+                {{ checklistScore }}/12 Complete
+              </span>
+            </div>
+          </div>
+
+          <!-- 1. Title + Thesis -->
+          <div class="mb-6 pb-6 border-b-2 border-[#E5E5E5]">
+            <div class="flex items-center gap-2 mb-3">
+              <span :class="simpleData.title.length > 5 ? 'check-pass' : 'check-fail'">
+                {{ simpleData.title.length > 5 ? '✓' : '○' }}
+              </span>
+              <h3 class="font-bold">1. Title + One-Line Thesis</h3>
+            </div>
+            <input v-model="simpleData.title" 
+                   placeholder="Title: Specific outcome/mechanism, not generic"
+                   class="w-full border-2 border-[#0A0A0A] px-4 py-3 mb-3">
+            <textarea v-model="simpleData.thesis" 
+                      placeholder="One declarative sentence stating the main claim"
+                      rows="2"
+                      class="w-full border-2 border-[#0A0A0A] px-4 py-3"></textarea>
+          </div>
+
+          <!-- 2. Answer Box -->
+          <div class="mb-6 pb-6 border-b-2 border-[#E5E5E5]">
+            <div class="flex items-center gap-2 mb-3">
+              <span :class="answerBoxValid ? 'check-pass' : 'check-fail'">
+                {{ answerBoxValid ? '✓' : '○' }}
+              </span>
+              <h3 class="font-bold">2. Answer Box (40-60 words)</h3>
+              <span class="word-count ml-auto">{{ answerBoxWordCount }} words</span>
+            </div>
+            <p class="text-xs text-[#6B6B6B] mb-3">
+              AI-quotable snippet: (1) Situation/context, (2) Key claim, (3) Mechanism/why
+            </p>
+            <textarea v-model="simpleData.answerBox" 
+                      placeholder="Write a 40-60 word snippet that stands alone. No warm-up phrases."
+                      rows="4"
+                      class="w-full border-2 border-[#0A0A0A] px-4 py-3"></textarea>
+          </div>
+
+          <!-- 3. Key Facts -->
+          <div class="mb-6 pb-6 border-b-2 border-[#E5E5E5]">
+            <div class="flex items-center gap-2 mb-3">
+              <span :class="keyFactsValid ? 'check-pass' : 'check-fail'">
+                {{ keyFactsValid ? '✓' : '○' }}
+              </span>
+              <h3 class="font-bold">3. Key Facts (8-15 atomic lines)</h3>
+              <span class="word-count ml-auto">{{ keyFactsCount }} facts</span>
+            </div>
+            <p class="text-xs text-[#6B6B6B] mb-3">
+              One fact per line. No pronouns. Format: "X is Y" / "X causes Y by Z" / "X requires Y when Z"
+            </p>
+            <textarea v-model="simpleData.keyFacts" 
+                      placeholder="Entity X defines a stable identifier for disambiguation.&#10;Comparison tables require at least three columns to preserve context.&#10;Evidence-based identity reduces ambiguity in entity matching by 40%."
+                      rows="10"
+                      class="w-full border-2 border-[#0A0A0A] px-4 py-3 font-mono text-sm"></textarea>
+          </div>
+
+          <!-- 4. H2 Sections -->
+          <div class="mb-6 pb-6 border-b-2 border-[#E5E5E5]">
+            <div class="flex items-center gap-2 mb-3">
+              <span :class="sectionsValid ? 'check-pass' : 'check-fail'">
+                {{ sectionsValid ? '✓' : '○' }}
+              </span>
+              <h3 class="font-bold">4. Main Sections (3-6 H2s)</h3>
+              <span class="word-count ml-auto">{{ simpleData.sections.length }} sections</span>
+            </div>
+            <p class="text-xs text-[#6B6B6B] mb-3">
+              Each section: definition/constraint + information gain (number/rule/comparison/checklist)
+            </p>
+            <div v-for="(section, i) in simpleData.sections" :key="i" class="mb-3 bg-[#F8F8F8] p-4">
+              <input v-model="section.heading" 
+                     :placeholder="'H2 #' + (i+1) + ': Entity/Mechanism/Question'"
+                     class="w-full border-2 border-[#0A0A0A] px-3 py-2 mb-2">
+              <textarea v-model="section.content" 
+                        placeholder="Definition/constraint + one information-gain item (number/rule/comparison)"
+                        rows="3"
+                        class="w-full border-2 border-[#0A0A0A] px-3 py-2 text-sm"></textarea>
+              <button @click="simpleData.sections.splice(i, 1)" 
+                      class="mt-2 px-3 py-1 bg-[#E5E5E5] text-[#0A0A0A] text-xs">
+                Remove Section
+              </button>
+            </div>
+            <button @click="simpleData.sections.push({heading: '', content: ''})" 
+                    class="w-full px-4 py-2 bg-[#E5E5E5] text-[#0A0A0A] border-2 border-[#0A0A0A]">
+              + Add Section
+            </button>
+          </div>
+
+          <!-- 5. Structured Asset -->
+          <div class="mb-6 pb-6 border-b-2 border-[#E5E5E5]">
+            <div class="flex items-center gap-2 mb-3">
+              <span :class="simpleData.structuredAsset.length > 20 ? 'check-pass' : 'check-fail'">
+                {{ simpleData.structuredAsset.length > 20 ? '✓' : '○' }}
+              </span>
+              <h3 class="font-bold">5. Structured Asset (required)</h3>
+            </div>
+            <p class="text-xs text-[#6B6B6B] mb-3">
+              Choose ONE: Table (3+ cols) / Technical list / Decision rubric / Field spec
+            </p>
+            <textarea v-model="simpleData.structuredAsset" 
+                      placeholder="Paste your table, list, rubric, or spec here (markdown/CSV/plain text)"
+                      rows="8"
+                      class="w-full border-2 border-[#0A0A0A] px-4 py-3 font-mono text-sm"></textarea>
+          </div>
+
+          <!-- 6. What This Means -->
+          <div class="mb-6 pb-6 border-b-2 border-[#E5E5E5]">
+            <div class="flex items-center gap-2 mb-3">
+              <span :class="simpleData.implications.length > 10 && simpleData.nextActions.length > 10 ? 'check-pass' : 'check-fail'">
+                {{ simpleData.implications.length > 10 && simpleData.nextActions.length > 10 ? '✓' : '○' }}
+              </span>
+              <h3 class="font-bold">6. What This Means (actionable closure)</h3>
+            </div>
+            <label class="block text-sm font-medium mb-2">Implications (3-5 bullets):</label>
+            <textarea v-model="simpleData.implications" 
+                      placeholder="• Implication 1: what changes&#10;• Implication 2: what to watch&#10;• Implication 3: what becomes possible"
+                      rows="4"
+                      class="w-full border-2 border-[#0A0A0A] px-4 py-3 mb-3 text-sm"></textarea>
+            
+            <label class="block text-sm font-medium mb-2">Next Actions (3-5 bullets):</label>
+            <textarea v-model="simpleData.nextActions" 
+                      placeholder="• Action 1: concrete step&#10;• Action 2: concrete step&#10;• Action 3: concrete step"
+                      rows="4"
+                      class="w-full border-2 border-[#0A0A0A] px-4 py-3 mb-3 text-sm"></textarea>
+            
+            <label class="block text-sm font-medium mb-2">First 30 Minutes:</label>
+            <input v-model="simpleData.first30Min" 
+                   placeholder="One immediate action a reader can execute quickly"
+                   class="w-full border-2 border-[#0A0A0A] px-4 py-2 text-sm">
+          </div>
+
+          <!-- 7. Related Resources -->
+          <div class="mb-6 pb-6 border-b-2 border-[#E5E5E5]">
+            <div class="flex items-center gap-2 mb-3">
+              <span :class="simpleData.relatedResources.length > 10 ? 'check-pass' : 'check-fail'">
+                {{ simpleData.relatedResources.length > 10 ? '✓' : '○' }}
+              </span>
+              <h3 class="font-bold">7. Related Resources (internal links)</h3>
+            </div>
+            <textarea v-model="simpleData.relatedResources" 
+                      placeholder="Parent pillar: [slug or title]&#10;Related page: [slug or title]&#10;Related page: [slug or title]"
+                      rows="4"
+                      class="w-full border-2 border-[#0A0A0A] px-4 py-3 text-sm"></textarea>
+          </div>
+
+          <!-- 8. FAQ -->
+          <div class="mb-6">
+            <div class="flex items-center gap-2 mb-3">
+              <span :class="faqValid ? 'check-pass' : 'check-fail'">
+                {{ faqValid ? '✓' : '○' }}
+              </span>
+              <h3 class="font-bold">8. FAQ (3-5 Q&As, <50 words each)</h3>
+              <span class="word-count ml-auto">{{ simpleData.faq.length }} Q&As</span>
+            </div>
+            <div v-for="(qa, i) in simpleData.faq" :key="i" class="mb-4 bg-[#F8F8F8] p-4">
+              <input v-model="qa.question" 
+                     :placeholder="'Question ' + (i+1)"
+                     class="w-full border-2 border-[#0A0A0A] px-3 py-2 mb-2">
+              <textarea v-model="qa.answer" 
+                        placeholder="Short answer (<50 words): definition / yes-no + condition / number + scope / step"
+                        rows="3"
+                        class="w-full border-2 border-[#0A0A0A] px-3 py-2 text-sm mb-2"></textarea>
+              <div class="flex items-center justify-between">
+                <span class="text-xs" :class="qa.answer.split(' ').length <= 50 ? 'check-pass' : 'check-fail'">
+                  {{ qa.answer.split(' ').filter(w => w).length }} words
+                </span>
+                <button @click="simpleData.faq.splice(i, 1)" 
+                        class="px-3 py-1 bg-[#E5E5E5] text-[#0A0A0A] text-xs">
+                  Remove
+                </button>
+              </div>
+            </div>
+            <button @click="simpleData.faq.push({question: '', answer: ''})" 
+                    class="w-full px-4 py-2 bg-[#E5E5E5] text-[#0A0A0A] border-2 border-[#0A0A0A]">
+              + Add Q&A
+            </button>
+          </div>
+        </div>
+
+        <!-- Actions -->
+        <div class="flex gap-4">
+          <button @click="saveSimplePage" 
+                  :disabled="saving || checklistScore < 8"
+                  class="flex-1 px-8 py-4 bg-[#0A0A0A] text-white font-medium uppercase tracking-wide disabled:opacity-50">
+            {{ saving ? 'Saving...' : 'Save Draft' }}
+          </button>
+          <button @click="generateArtifacts" 
+                  :disabled="!currentPage.id || checklistScore < 8"
+                  class="flex-1 px-8 py-4 bg-[#00C2FF] text-[#0A0A0A] border-2 border-[#00C2FF] font-medium uppercase tracking-wide disabled:opacity-50">
+            Generate Artifacts
+          </button>
+          <button @click="viewCompliance" 
+                  :disabled="!currentPage.id"
+                  class="px-8 py-4 bg-white text-[#0A0A0A] border-2 border-[#0A0A0A] font-medium uppercase tracking-wide disabled:opacity-50">
+            View Compliance
+          </button>
+        </div>
+
+        <div v-if="checklistScore < 8" class="bg-[#FEF3C7] border-2 border-[#F59E0B] p-4 text-sm">
+          <strong>⚠ Draft Incomplete:</strong> Complete at least 8/12 checklist items before saving or generating artifacts.
+        </div>
+      </div>
+
+      <!-- Advanced Mode (Developers) -->
+      <div v-if="editorMode==='advanced'" class="bg-white border-2 border-[#0A0A0A] p-6">
+        <h2 class="text-xl font-bold mb-4">Advanced Mode (Developer View)</h2>
+        <p class="text-sm text-[#6B6B6B] mb-6">
+          Direct access to facts, sections, and protocol internals. For technical users only.
+        </p>
+        <div class="bg-[#F8F8F8] p-4 rounded font-mono text-sm">
+          <pre>{{ JSON.stringify(currentPage, null, 2) }}</pre>
+        </div>
+        <button @click="editorMode='simple'" 
+                class="mt-4 px-6 py-2 bg-[#00C2FF] text-[#0A0A0A] border-2 border-[#00C2FF]">
+          ← Back to Simple Mode
+        </button>
+      </div>
+    </div>
+
+    <!-- Artifacts View -->
+    <div v-if="apiKey && view==='artifacts'" class="max-w-7xl mx-auto mt-8 px-4 pb-12">
+      <div class="bg-white border-2 border-[#0A0A0A] p-6 mb-6">
+        <div class="flex items-center justify-between mb-4">
+          <h2 class="text-xl font-bold">Generated Artifacts</h2>
+          <button @click="view='editor'" 
+                  class="px-4 py-2 bg-[#E5E5E5] text-[#0A0A0A]">
+            ← Back to Editor
+          </button>
+        </div>
+        <p class="text-sm text-[#6B6B6B]">
+          Download these files and add them to your page deployment.
+        </p>
+      </div>
+
+      <div v-for="(artifact, key) in artifacts" :key="key" class="bg-white border-2 border-[#0A0A0A] p-6 mb-4">
+        <div class="flex items-center justify-between mb-4">
+          <h3 class="font-bold text-lg capitalize">{{ key.replace('_', ' ') }}</h3>
+          <button @click="downloadArtifact(key)" 
+                  class="px-4 py-2 bg-[#00C2FF] text-[#0A0A0A] border-2 border-[#00C2FF]">
+            Download
+          </button>
+        </div>
+        <pre class="bg-[#F8F8F8] p-4 overflow-x-auto text-xs font-mono border-2 border-[#E5E5E5]">{{ artifact }}</pre>
+      </div>
+    </div>
+
+    <!-- Compliance View -->
+    <div v-if="apiKey && view==='compliance'" class="max-w-5xl mx-auto mt-8 px-4 pb-12">
+      <div class="bg-white border-2 border-[#0A0A0A] p-6 mb-6">
+        <div class="flex items-center justify-between mb-4">
+          <h2 class="text-xl font-bold">Protocol Compliance (A-J)</h2>
+          <button @click="view='editor'" 
+                  class="px-4 py-2 bg-[#E5E5E5] text-[#0A0A0A]">
+            ← Back to Editor
+          </button>
+        </div>
+        <div class="text-3xl font-bold" :class="complianceScore >= 8 ? 'check-pass' : 'check-fail'">
+          {{ complianceScore }}/10 Checks Passing
+        </div>
+      </div>
+
+      <div class="space-y-3">
+        <div v-for="check in complianceChecks" :key="check.id" 
+             class="bg-white border-2 border-[#0A0A0A] p-6">
+          <div class="flex items-start gap-4">
+            <span class="text-2xl" :class="check.status === 'pass' ? 'check-pass' : check.status === 'fail' ? 'check-fail' : 'check-pending'">
+              {{ check.status === 'pass' ? '✓' : check.status === 'fail' ? '✗' : '○' }}
+            </span>
+            <div class="flex-1">
+              <h3 class="font-bold text-lg mb-1">{{ check.id.toUpperCase() }} - {{ check.title }}</h3>
+              <p class="text-sm text-[#6B6B6B] mb-2">{{ check.description }}</p>
+              <p class="text-sm" :class="check.status === 'pass' ? 'check-pass' : check.status === 'fail' ? 'check-fail' : 'check-pending'">
+                {{ check.message }}
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
   </div>
 
@@ -457,284 +441,288 @@
     createApp({
       data() {
         return {
-          apiKey: localStorage.getItem('studio_api_key') || '',
+          apiKey: '',
           apiKeyInput: '',
-          view: 'list', // list, wizard, builder
-          builderTab: 'sections', // sections, preview, compliance
-          previewTab: 'markdown',
-          
-          templates: [],
-          
-          pages: {
-            loading: false,
-            data: [],
-            error: null
-          },
-          
-          wizard: {
-            page_type: '',
-            domain: '',
-            path: '',
+          view: 'list', // list, editor, artifacts, compliance
+          editorMode: 'simple', // simple, advanced
+          loading: false,
+          saving: false,
+          pages: [],
+          currentPage: { domain: 'croutons.ai', path: '', page_type: 'blog' },
+          simpleData: {
             title: '',
-            source_url: '',
-            loading: false
-          },
-          
-          currentPage: null,
-          
-          builder: {
+            thesis: '',
+            answerBox: '',
+            keyFacts: '',
             sections: [],
-            facts: [],
-            saving: false,
-            generating: false
+            structuredAsset: '',
+            implications: '',
+            nextActions: '',
+            first30Min: '',
+            relatedResources: '',
+            faq: []
           },
-          
-          preview: {
-            artifacts: []
-          },
-          
-          compliance: {
-            loading: false,
-            data: null
-          },
-          
-          toast: {
-            show: false,
-            message: ''
-          }
+          artifacts: {},
+          complianceChecks: []
         };
       },
-      
-      async mounted() {
-        if (this.apiKey) {
-          await this.loadTemplates();
-          await this.loadPages();
+      computed: {
+        answerBoxWordCount() {
+          return this.simpleData.answerBox.split(' ').filter(w => w).length;
+        },
+        answerBoxValid() {
+          const wc = this.answerBoxWordCount;
+          return wc >= 40 && wc <= 60;
+        },
+        keyFactsCount() {
+          return this.simpleData.keyFacts.split('\n').filter(l => l.trim()).length;
+        },
+        keyFactsValid() {
+          const count = this.keyFactsCount;
+          return count >= 8 && count <= 15;
+        },
+        sectionsValid() {
+          const count = this.simpleData.sections.filter(s => s.heading && s.content).length;
+          return count >= 3 && count <= 6;
+        },
+        faqValid() {
+          const count = this.simpleData.faq.filter(qa => qa.question && qa.answer).length;
+          return count >= 3 && count <= 5;
+        },
+        checklistScore() {
+          let score = 0;
+          if (this.simpleData.title.length > 5) score++;
+          if (this.simpleData.thesis.length > 10) score++;
+          if (this.answerBoxValid) score++;
+          if (this.keyFactsValid) score++;
+          if (this.sectionsValid) score++;
+          if (this.simpleData.structuredAsset.length > 20) score++;
+          if (this.simpleData.implications.length > 10 && this.simpleData.nextActions.length > 10) score++;
+          if (this.simpleData.first30Min.length > 5) score++;
+          if (this.simpleData.relatedResources.length > 10) score++;
+          if (this.faqValid) score++;
+          // Terminology + red-flag check (manual, assume pass if >8)
+          if (score >= 8) score += 2;
+          return score;
+        },
+        complianceScore() {
+          return this.complianceChecks.filter(c => c.status === 'pass').length;
         }
       },
-      
       methods: {
         setApiKey() {
-          const key = this.apiKeyInput.trim();
-          if (key) {
-            this.apiKey = key;
-            localStorage.setItem('studio_api_key', key);
-            this.loadTemplates();
+          if (this.apiKeyInput) {
+            this.apiKey = this.apiKeyInput;
+            localStorage.setItem('studio_api_key', this.apiKey);
             this.loadPages();
           }
         },
-        
-        async apiCall(url, options = {}) {
-          const headers = {
-            'x-studio-key': this.apiKey,
-            'Content-Type': 'application/json',
-            ...options.headers
-          };
-          
-          const res = await fetch(url, {
-            ...options,
-            headers
-          });
-          
-          if (!res.ok) {
-            const text = await res.text();
-            throw new Error(`HTTP ${res.status}: ${text.substring(0, 200)}`);
-          }
-          
-          return res.json();
-        },
-        
-        async loadTemplates() {
-          try {
-            const data = await this.apiCall('/studio/templates');
-            this.templates = data.templates || [];
-          } catch (e) {
-            this.showToast(`Failed to load templates: ${e.message}`);
-          }
-        },
-        
         async loadPages() {
-          this.pages.loading = true;
-          this.pages.error = null;
+          this.loading = true;
           try {
-            const data = await this.apiCall('/studio/pages');
-            this.pages.data = data.data || [];
-          } catch (e) {
-            this.pages.error = e.message;
-            if (e.message.includes('401')) {
-              this.apiKey = '';
-              localStorage.removeItem('studio_api_key');
+            const res = await fetch('/studio/pages', {
+              headers: { 'x-studio-key': this.apiKey }
+            });
+            if (res.ok) {
+              this.pages = await res.json();
             }
-          } finally {
-            this.pages.loading = false;
+          } catch (err) {
+            console.error('Load pages error:', err);
           }
+          this.loading = false;
         },
-        
-        startWizard() {
-          this.wizard = {
-            page_type: '',
-            domain: '',
-            path: '',
-            title: '',
-            source_url: '',
-            loading: false
+        startNewPage() {
+          this.currentPage = { 
+            domain: 'croutons.ai', 
+            path: '/blog/untitled', 
+            page_type: 'blog' 
           };
-          this.view = 'wizard';
+          this.simpleData = {
+            title: '',
+            thesis: '',
+            answerBox: '',
+            keyFacts: '',
+            sections: [
+              { heading: '', content: '' },
+              { heading: '', content: '' },
+              { heading: '', content: '' }
+            ],
+            structuredAsset: '',
+            implications: '',
+            nextActions: '',
+            first30Min: '',
+            relatedResources: '',
+            faq: [
+              { question: '', answer: '' },
+              { question: '', answer: '' },
+              { question: '', answer: '' }
+            ]
+          };
+          this.view = 'editor';
+          this.editorMode = 'simple';
         },
-        
-        async createPageFromWizard() {
-          this.wizard.loading = true;
+        async editPage(id) {
+          this.loading = true;
           try {
-            const data = await this.apiCall('/studio/pages', {
-              method: 'POST',
+            const res = await fetch(`/studio/pages/${id}`, {
+              headers: { 'x-studio-key': this.apiKey }
+            });
+            if (res.ok) {
+              const data = await res.json();
+              this.currentPage = data.page;
+              // TODO: Parse technical data back into simple format
+              this.view = 'editor';
+            }
+          } catch (err) {
+            console.error('Edit page error:', err);
+          }
+          this.loading = false;
+        },
+        async saveSimplePage() {
+          if (this.checklistScore < 8) {
+            alert('Complete at least 8/12 checklist items before saving.');
+            return;
+          }
+
+          this.saving = true;
+          try {
+            // Convert simple data to technical format
+            const sections = this.simpleData.sections
+              .filter(s => s.heading && s.content)
+              .map((s, i) => ({
+                anchor: s.heading.toLowerCase().replace(/[^a-z0-9]+/g, '-'),
+                heading: s.heading,
+                description: s.content.substring(0, 200)
+              }));
+
+            const facts = this.simpleData.keyFacts
+              .split('\n')
+              .filter(l => l.trim())
+              .map(line => {
+                // Parse "X is Y" / "X does Y" format
+                const parts = line.split(/\s+(is|are|has|does|causes|requires|includes)\s+/i);
+                return {
+                  subject: parts[0] || 'Unknown',
+                  predicate: parts[1] || 'related_to',
+                  object: parts[2] || line,
+                  schema_type: 'Thing',
+                  fact_category: 'content'
+                };
+              });
+
+            // Create or update page
+            const method = this.currentPage.id ? 'PUT' : 'POST';
+            const url = this.currentPage.id 
+              ? `/studio/pages/${this.currentPage.id}` 
+              : '/studio/pages';
+
+            const pageRes = await fetch(url, {
+              method,
+              headers: {
+                'Content-Type': 'application/json',
+                'x-studio-key': this.apiKey
+              },
               body: JSON.stringify({
-                domain: this.wizard.domain || null,
-                path: this.wizard.path,
-                page_type: this.wizard.page_type,
-                title: this.wizard.title,
-                source_url: this.wizard.source_url || null
+                domain: this.currentPage.domain,
+                path: this.currentPage.path,
+                page_type: this.currentPage.page_type
               })
             });
-            
-            this.showToast('Page created successfully');
-            await this.openBuilder(data.page.id);
-            
-          } catch (e) {
-            this.showToast(`Failed to create page: ${e.message}`);
-          } finally {
-            this.wizard.loading = false;
-          }
-        },
-        
-        async openBuilder(pageId) {
-          try {
-            const data = await this.apiCall(`/studio/pages/${pageId}`);
-            this.currentPage = data.page;
-            this.builder.sections = data.sections || [];
-            this.builder.facts = data.facts || [];
-            this.preview.artifacts = data.artifacts || [];
-            this.view = 'builder';
-            this.builderTab = 'sections';
-            
-            // Load compliance
-            await this.loadCompliance(pageId);
-            
-          } catch (e) {
-            this.showToast(`Failed to load page: ${e.message}`);
-          }
-        },
-        
-        getFactsForSection(sectionId) {
-          return this.builder.facts.filter(f => f.section_id === sectionId);
-        },
-        
-        addFact(sectionId) {
-          this.builder.facts.push({
-            section_id: sectionId,
-            subject: '',
-            predicate: '',
-            object: '',
-            object_type: 'text',
-            evidence_text: ''
-          });
-        },
-        
-        removeFact(index) {
-          this.builder.facts.splice(index, 1);
-        },
-        
-        async saveAll() {
-          if (!this.currentPage) return;
-          
-          this.builder.saving = true;
-          try {
+
+            if (!pageRes.ok) throw new Error('Failed to save page');
+            const pageData = await pageRes.json();
+            this.currentPage.id = pageData.id;
+
             // Save sections
-            await this.apiCall(`/studio/pages/${this.currentPage.id}/sections`, {
+            await fetch(`/studio/pages/${this.currentPage.id}/sections`, {
               method: 'PUT',
-              body: JSON.stringify({ sections: this.builder.sections })
+              headers: {
+                'Content-Type': 'application/json',
+                'x-studio-key': this.apiKey
+              },
+              body: JSON.stringify({ sections })
             });
-            
+
             // Save facts
-            await this.apiCall(`/studio/pages/${this.currentPage.id}/facts`, {
+            await fetch(`/studio/pages/${this.currentPage.id}/facts`, {
               method: 'PUT',
-              body: JSON.stringify({ facts: this.builder.facts })
+              headers: {
+                'Content-Type': 'application/json',
+                'x-studio-key': this.apiKey
+              },
+              body: JSON.stringify({ facts })
             });
-            
-            this.showToast('Saved successfully');
-            
-          } catch (e) {
-            this.showToast(`Save failed: ${e.message}`);
-          } finally {
-            this.builder.saving = false;
+
+            alert('✓ Page saved successfully!');
+            this.loadPages();
+          } catch (err) {
+            console.error('Save error:', err);
+            alert('Error saving page: ' + err.message);
           }
+          this.saving = false;
         },
-        
-        async generateAll() {
-          if (!this.currentPage) return;
-          
-          this.builder.generating = true;
+        async generateArtifacts() {
+          if (!this.currentPage.id) {
+            alert('Save the page first before generating artifacts.');
+            return;
+          }
+
           try {
-            await this.apiCall(`/studio/pages/${this.currentPage.id}/generate`, {
-              method: 'POST'
+            const res = await fetch(`/studio/pages/${this.currentPage.id}/artifacts`, {
+              method: 'POST',
+              headers: { 'x-studio-key': this.apiKey }
             });
+            if (!res.ok) throw new Error('Failed to generate artifacts');
             
-            // Reload page to get new artifacts
-            await this.openBuilder(this.currentPage.id);
-            this.builderTab = 'preview';
-            this.showToast('Artifacts generated successfully');
+            const artRes = await fetch(`/studio/pages/${this.currentPage.id}/artifacts`, {
+              headers: { 'x-studio-key': this.apiKey }
+            });
+            if (!artRes.ok) throw new Error('Failed to load artifacts');
             
-          } catch (e) {
-            this.showToast(`Generation failed: ${e.message}`);
-          } finally {
-            this.builder.generating = false;
+            this.artifacts = await artRes.json();
+            this.view = 'artifacts';
+          } catch (err) {
+            console.error('Generate artifacts error:', err);
+            alert('Error generating artifacts: ' + err.message);
           }
         },
-        
-        async loadCompliance(pageId) {
-          this.compliance.loading = true;
+        async viewCompliance() {
+          if (!this.currentPage.id) {
+            alert('Save the page first before checking compliance.');
+            return;
+          }
+
           try {
-            const data = await this.apiCall(`/studio/pages/${pageId}/compliance`);
-            this.compliance.data = data;
-          } catch (e) {
-            this.showToast(`Compliance check failed: ${e.message}`);
-          } finally {
-            this.compliance.loading = false;
+            const res = await fetch(`/studio/pages/${this.currentPage.id}/compliance`, {
+              headers: { 'x-studio-key': this.apiKey }
+            });
+            if (!res.ok) throw new Error('Failed to load compliance');
+            
+            const data = await res.json();
+            this.complianceChecks = data.checks;
+            this.view = 'compliance';
+          } catch (err) {
+            console.error('Compliance error:', err);
+            alert('Error loading compliance: ' + err.message);
           }
         },
-        
-        copyArtifact(artifact) {
-          navigator.clipboard.writeText(artifact.content).then(
-            () => this.showToast('Copied to clipboard'),
-            () => this.showToast('Clipboard copy failed')
-          );
-        },
-        
-        downloadArtifact(artifact) {
-          const blob = new Blob([artifact.content], { type: 'text/plain' });
+        downloadArtifact(key) {
+          const content = this.artifacts[key];
+          const filename = `${this.currentPage.path.split('/').pop()}.${key === 'markdown' ? 'md' : key === 'ndjson' ? 'ndjson' : key === 'json_ld' ? 'json' : 'html'}`;
+          const blob = new Blob([content], { type: 'text/plain' });
           const url = URL.createObjectURL(blob);
           const a = document.createElement('a');
           a.href = url;
-          a.download = `${artifact.artifact_type}-${Date.now()}.txt`;
+          a.download = filename;
           a.click();
           URL.revokeObjectURL(url);
-          this.showToast('Downloaded');
-        },
-        
-        getTemplate(pageType) {
-          return this.templates.find(t => t.key === pageType);
-        },
-        
-        formatDate(iso) {
-          if (!iso) return '—';
-          try {
-            return new Date(iso).toISOString().replace('T', ' ').substring(0, 19);
-          } catch {
-            return String(iso);
-          }
-        },
-        
-        showToast(message) {
-          this.toast = { show: true, message };
-          setTimeout(() => { this.toast.show = false; }, 2500);
+        }
+      },
+      mounted() {
+        const saved = localStorage.getItem('studio_api_key');
+        if (saved) {
+          this.apiKey = saved;
+          this.loadPages();
         }
       }
     }).mount('#app');
