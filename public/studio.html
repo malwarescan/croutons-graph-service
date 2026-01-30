@@ -106,7 +106,7 @@
             v-model="apiKeyInput"
             type="password"
             placeholder="Enter API key..."
-            class="w-full px-4 py-3 border-2 border-[#0A0A0A] rounded-lg font-mono text-sm"
+            class="w-full px-4 py-3 border-2 border-[#0A0A0A]  font-mono text-sm"
             @keyup.enter="setApiKey">
           <button @click="setApiKey" 
                   class="w-full md:w-auto px-8 py-3 bg-[#0A0A0A] text-white border-2 border-[#0A0A0A] font-medium uppercase tracking-wide">
@@ -131,7 +131,7 @@
             </button>
           </div>
 
-          <div v-if="pages.error" class="border-2 border-[#EF4444] bg-red-50 p-4 rounded-lg mb-4 text-sm text-[#EF4444]">
+          <div v-if="pages.error" class="border-2 border-[#EF4444] bg-red-50 p-4  mb-4 text-sm text-[#EF4444]">
             {{ pages.error }}
           </div>
 
@@ -150,10 +150,10 @@
                     {{ page.domain || 'draft' }}{{ page.path }}
                   </div>
                   <div class="flex gap-2 mt-2">
-                    <span class="px-2 py-1 bg-[#00C2FF]/10 text-[#00C2FF] text-xs font-mono rounded">
+                    <span class="px-2 py-1 bg-[#00C2FF]/10 text-[#00C2FF] text-xs font-mono ">
                       {{ page.page_type }}
                     </span>
-                    <span class="px-2 py-1 text-xs font-mono rounded"
+                    <span class="px-2 py-1 text-xs font-mono "
                           :class="page.status==='ready' ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-700'">
                       {{ page.status }}
                     </span>
@@ -181,7 +181,7 @@
           <div>
             <label class="block text-sm font-bold text-[#0A0A0A] mb-2">Page Type *</label>
             <select v-model="wizard.page_type" 
-                    class="w-full px-4 py-3 border-2 border-[#0A0A0A] rounded-lg font-mono text-sm">
+                    class="w-full px-4 py-3 border-2 border-[#0A0A0A]  font-mono text-sm">
               <option value="">Choose template...</option>
               <option v-for="t in templates" :key="t.key" :value="t.key">
                 {{ t.name }}
@@ -197,7 +197,7 @@
             <input v-model="wizard.domain" 
                    type="text" 
                    placeholder="example.com"
-                   class="w-full px-4 py-3 border-2 border-[#0A0A0A] rounded-lg font-mono text-sm">
+                   class="w-full px-4 py-3 border-2 border-[#0A0A0A]  font-mono text-sm">
             <div class="mt-1 text-xs text-[#6B6B6B]">Optional for drafts</div>
           </div>
 
@@ -206,7 +206,7 @@
             <input v-model="wizard.path" 
                    type="text" 
                    placeholder="/pricing"
-                   class="w-full px-4 py-3 border-2 border-[#0A0A0A] rounded-lg font-mono text-sm">
+                   class="w-full px-4 py-3 border-2 border-[#0A0A0A]  font-mono text-sm">
           </div>
 
           <div>
@@ -214,7 +214,7 @@
             <input v-model="wizard.title" 
                    type="text" 
                    placeholder="Product Name or Page Title"
-                   class="w-full px-4 py-3 border-2 border-[#0A0A0A] rounded-lg text-sm">
+                   class="w-full px-4 py-3 border-2 border-[#0A0A0A]  text-sm">
           </div>
 
           <div>
@@ -222,13 +222,13 @@
             <input v-model="wizard.source_url" 
                    type="text" 
                    placeholder="https://example.com/pricing"
-                   class="w-full px-4 py-3 border-2 border-[#0A0A0A] rounded-lg font-mono text-sm">
+                   class="w-full px-4 py-3 border-2 border-[#0A0A0A]  font-mono text-sm">
             <div class="mt-1 text-xs text-[#6B6B6B]">Auto-generated from domain + path if empty</div>
           </div>
 
           <button @click="createPageFromWizard" 
                   :disabled="!wizard.page_type || !wizard.path || !wizard.title || wizard.loading"
-                  class="w-full px-8 py-3 bg-[#0A0A0A] text-white rounded-lg font-medium hover:bg-[#00C2FF] disabled:bg-[#6B6B6B] disabled:opacity-60 disabled:cursor-not-allowed transition-colors duration-200">
+                  class="w-full px-8 py-3 bg-[#0A0A0A] text-white  font-medium hover:bg-[#00C2FF] disabled:bg-[#6B6B6B] disabled:opacity-60 disabled:cursor-not-allowed transition-colors duration-200">
             {{ wizard.loading ? 'Creating...' : 'Create Page' }}
           </button>
         </div>
@@ -245,10 +245,10 @@
                 {{ currentPage.domain || 'draft' }}{{ currentPage.path }}
               </div>
               <div class="flex gap-2 mt-3">
-                <span class="px-3 py-1 bg-[#00C2FF]/10 text-[#00C2FF] text-xs font-mono rounded-full border border-[#00C2FF]">
+                <span class="px-3 py-1 bg-[#00C2FF]/10 text-[#00C2FF] text-xs font-mono rounded-none border border-[#00C2FF]">
                   {{ currentPage.page_type }}
                 </span>
-                <span class="px-3 py-1 text-xs font-mono rounded-full border"
+                <span class="px-3 py-1 text-xs font-mono rounded-none border"
                       :class="currentPage.status==='ready' ? 'bg-[#25D366]/10 text-[#25D366] border-[#25D366]' : 'bg-gray-100 text-[#6B6B6B] border-[#6B6B6B]'">
                   {{ currentPage.status.toUpperCase() }}
                 </span>
@@ -256,17 +256,17 @@
             </div>
             <div class="flex flex-col sm:flex-row gap-2 w-full md:w-auto">
               <button @click="view='list'" 
-                      class="px-6 py-3 md:py-2 border-2 border-[#0A0A0A] rounded-lg font-medium hover:bg-[#F8F8F8] transition-colors duration-200">
+                      class="px-6 py-3 md:py-2 border-2 border-[#0A0A0A]  font-medium hover:bg-[#F8F8F8] transition-colors duration-200">
                 Back
               </button>
               <button @click="saveAll" 
                       :disabled="builder.saving"
-                      class="px-6 py-3 md:py-2 bg-[#0A0A0A] text-white rounded-lg font-medium hover:bg-[#00C2FF] disabled:bg-[#6B6B6B] disabled:opacity-60 transition-colors duration-200">
+                      class="px-6 py-3 md:py-2 bg-[#0A0A0A] text-white  font-medium hover:bg-[#00C2FF] disabled:bg-[#6B6B6B] disabled:opacity-60 transition-colors duration-200">
                 {{ builder.saving ? 'Saving...' : 'Save All' }}
               </button>
               <button @click="generateAll" 
                       :disabled="builder.generating"
-                      class="px-6 py-3 md:py-2 bg-[#00C2FF] text-[#0A0A0A] rounded-lg font-medium hover:bg-[#0A0A0A] hover:text-white disabled:bg-[#6B6B6B] disabled:opacity-60 transition-colors duration-200">
+                      class="px-6 py-3 md:py-2 bg-[#00C2FF] text-[#0A0A0A]  font-medium hover:bg-[#0A0A0A] hover:text-white disabled:bg-[#6B6B6B] disabled:opacity-60 transition-colors duration-200">
                 {{ builder.generating ? 'Generating...' : 'Generate' }}
               </button>
             </div>
@@ -296,10 +296,10 @@
           <!-- Sections & Facts Tab -->
           <div v-if="builderTab==='sections'" class="p-6 md:p-8 space-y-6">
             <div v-for="(section, idx) in builder.sections" :key="section.id" 
-                 class="border-2 border-[#0A0A0A] rounded-lg p-4 md:p-6">
+                 class="border-2 border-[#0A0A0A]  p-4 md:p-6">
               <div class="flex items-center justify-between mb-4">
                 <h3 class="font-bold text-[#0A0A0A]">{{ section.heading || section.section_key }}</h3>
-                <span class="text-xs font-mono text-[#6B6B6B] bg-[#F8F8F8] px-2 py-1 rounded">#{{ section.order_index }}</span>
+                <span class="text-xs font-mono text-[#6B6B6B] bg-[#F8F8F8] px-2 py-1 ">#{{ section.order_index }}</span>
               </div>
 
               <div class="mb-6">
@@ -307,7 +307,7 @@
                 <textarea v-model="section.narrative_md"
                           rows="4"
                           placeholder="Write narrative content for this section..."
-                          class="w-full px-4 py-3 border-2 border-[#0A0A0A] rounded-lg text-sm resize-y">
+                          class="w-full px-4 py-3 border-2 border-[#0A0A0A]  text-sm resize-y">
                 </textarea>
               </div>
 
@@ -318,20 +318,20 @@
                        class="flex flex-col md:flex-row gap-2">
                     <input v-model="fact.subject" 
                            placeholder="Subject"
-                           class="flex-1 px-3 py-2 border-2 border-[#0A0A0A] rounded-lg text-sm font-mono">
+                           class="flex-1 px-3 py-2 border-2 border-[#0A0A0A]  text-sm font-mono">
                     <input v-model="fact.predicate" 
                            placeholder="Predicate"
-                           class="flex-1 px-3 py-2 border-2 border-[#0A0A0A] rounded-lg text-sm font-mono">
+                           class="flex-1 px-3 py-2 border-2 border-[#0A0A0A]  text-sm font-mono">
                     <input v-model="fact.object" 
                            placeholder="Object"
-                           class="flex-1 px-3 py-2 border-2 border-[#0A0A0A] rounded-lg text-sm font-mono">
+                           class="flex-1 px-3 py-2 border-2 border-[#0A0A0A]  text-sm font-mono">
                     <button @click="removeFact(factIdx)" 
-                            class="px-4 py-2 border-2 border-[#EF4444] text-[#EF4444] rounded-lg hover:bg-[#EF4444] hover:text-white transition-colors duration-200 font-bold">
+                            class="px-4 py-2 border-2 border-[#EF4444] text-[#EF4444]  hover:bg-[#EF4444] hover:text-white transition-colors duration-200 font-bold">
                       ×
                     </button>
                   </div>
                   <button @click="addFact(section.id)" 
-                          class="w-full px-4 py-3 border-2 border-[#0A0A0A] rounded-lg text-sm font-medium hover:bg-[#F8F8F8] transition-colors duration-200">
+                          class="w-full px-4 py-3 border-2 border-[#0A0A0A]  text-sm font-medium hover:bg-[#F8F8F8] transition-colors duration-200">
                     + Add Fact
                   </button>
                 </div>
@@ -395,7 +395,7 @@
                   </div>
                 </div>
                 <button @click="loadCompliance(currentPage.id)" 
-                        class="px-6 py-3 md:py-2 bg-[#0A0A0A] text-white rounded-lg font-medium hover:bg-[#00C2FF] transition-colors duration-200">
+                        class="px-6 py-3 md:py-2 bg-[#0A0A0A] text-white  font-medium hover:bg-[#00C2FF] transition-colors duration-200">
                   Refresh
                 </button>
               </div>
@@ -403,7 +403,7 @@
               <!-- A-J Grid -->
               <div class="grid grid-cols-5 gap-2 md:gap-3">
                 <div v-for="(status, letter) in compliance.data.status" :key="letter"
-                     class="border-2 p-4 rounded-lg text-center"
+                     class="border-2 p-4  text-center"
                      :class="status === true ? 'border-[#25D366] bg-[#25D366]/10' : status === false ? 'border-[#EF4444] bg-[#EF4444]/10' : 'border-[#6B6B6B] bg-gray-50'">
                   <div class="text-2xl md:text-3xl font-bold font-mono">{{ letter }}</div>
                   <div class="text-xs font-mono mt-1"
@@ -418,10 +418,10 @@
                 <h3 class="font-bold text-[#0A0A0A] mb-4">Issues to Fix ({{ compliance.data.issues.length }})</h3>
                 <div class="space-y-3">
                   <div v-for="(issue, idx) in compliance.data.issues" :key="idx"
-                       class="border-2 rounded-lg p-4"
+                       class="border-2  p-4"
                        :class="issue.severity==='error' ? 'border-[#EF4444] bg-[#EF4444]/10' : 'border-[#FF9500] bg-[#FF9500]/10'">
                     <div class="flex items-start gap-3">
-                      <span class="font-mono font-bold text-sm px-2 py-1 rounded"
+                      <span class="font-mono font-bold text-sm px-2 py-1 "
                             :class="issue.severity==='error' ? 'bg-[#EF4444] text-white' : 'bg-[#FF9500] text-white'">
                         {{ issue.requirement }}
                       </span>
@@ -434,7 +434,7 @@
                 </div>
               </div>
 
-              <div v-if="compliance.data.issues.length === 0" class="border-2 border-[#25D366] bg-[#25D366]/10 rounded-lg p-6 text-center">
+              <div v-if="compliance.data.issues.length === 0" class="border-2 border-[#25D366] bg-[#25D366]/10  p-6 text-center">
                 <div class="text-2xl mb-2">✅</div>
                 <div class="text-sm font-bold text-[#25D366]">All checks passed! This page is compliant.</div>
               </div>
@@ -446,7 +446,7 @@
 
     <!-- Toast Notification -->
     <div v-if="toast.show"
-         class="fixed bottom-4 right-4 px-6 py-3 bg-white border-2 border-[#0A0A0A] rounded-lg shadow-lg font-mono text-sm z-50 max-w-sm">
+         class="fixed bottom-4 right-4 px-6 py-3 bg-white border-2 border-[#0A0A0A]  shadow-lg font-mono text-sm z-50 max-w-sm">
       {{ toast.message }}
     </div>
   </div>
