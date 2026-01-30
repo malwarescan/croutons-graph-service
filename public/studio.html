@@ -247,17 +247,31 @@
           </div>
           
           <div v-if="croutonizerWarnings.length > 0" class="space-y-2">
-            <div v-for="(warning, i) in croutonizerWarnings.slice(0, 3)" :key="i" 
+            <div v-for="(warning, i) in (showAllWarnings ? croutonizerWarnings : croutonizerWarnings.slice(0, 3))" :key="i" 
                  class="bg-white border-2 border-[#F59E0B] p-3 text-sm">
-              <div class="font-bold text-[#F59E0B] mb-1">{{ warning.type.toUpperCase() }}</div>
+              <div class="flex items-start justify-between mb-2">
+                <div class="font-bold text-[#F59E0B]">{{ warning.type.toUpperCase() }}</div>
+                <button v-if="warning.fixable" 
+                        @click="autoFixIssue(warning)"
+                        class="px-3 py-1 bg-[#10B981] text-white text-xs font-bold border-2 border-[#0A0A0A] hover:bg-[#059669]">
+                  FIX
+                </button>
+              </div>
               <div class="text-[#0A0A0A] mb-1">{{ warning.message }}</div>
               <div v-if="warning.suggestion" class="text-gray-700 text-xs mt-2">
                 <strong>Fix:</strong> {{ warning.suggestion }}
               </div>
             </div>
-            <div v-if="croutonizerWarnings.length > 3" class="text-center text-sm text-gray-600 font-medium">
-              +{{ croutonizerWarnings.length - 3 }} more issues
-            </div>
+            <button v-if="croutonizerWarnings.length > 3 && !showAllWarnings" 
+                    @click="showAllWarnings = true"
+                    class="w-full py-2 text-center text-sm text-gray-700 font-medium border-2 border-gray-300 bg-gray-50 hover:bg-gray-100">
+              Show +{{ croutonizerWarnings.length - 3 }} more issues
+            </button>
+            <button v-if="showAllWarnings && croutonizerWarnings.length > 3" 
+                    @click="showAllWarnings = false"
+                    class="w-full py-2 text-center text-sm text-gray-700 font-medium border-2 border-gray-300 bg-gray-50 hover:bg-gray-100">
+              Show less
+            </button>
           </div>
         </div>
 
@@ -462,37 +476,40 @@
 
         <!-- Actions -->
         <div class="space-y-4">
-          <!-- COPY FOR CMS (PRIMARY ACTION) -->
-          <div v-if="simpleData.title && simpleData.answerBox" class="space-y-3">
-            <button @click="copyForCMS" 
-                    class="w-full px-8 py-6 bg-[#10B981] text-white font-bold uppercase tracking-wide text-xl border-4 border-[#0A0A0A] shadow-[12px_12px_0px_0px_rgba(0,0,0,0.4)] hover:shadow-[16px_16px_0px_0px_rgba(0,0,0,0.5)] transition-all">
-              COPY FOR CMS
-            </button>
-            <div class="flex gap-3">
+          <!-- PRIMARY: COPY FOR CMS -->
+          <button v-if="simpleData.title && simpleData.answerBox"
+                  @click="copyForCMS" 
+                  class="w-full px-8 py-8 bg-[#10B981] text-white font-bold uppercase tracking-wide text-2xl border-4 border-[#0A0A0A] shadow-[12px_12px_0px_0px_rgba(0,0,0,0.4)] hover:shadow-[16px_16px_0px_0px_rgba(0,0,0,0.5)] transition-all">
+            COPY FOR CMS
+          </button>
+          
+          <!-- SECONDARY: SAVE -->
+          <button @click="saveSimplePage" 
+                  :disabled="saving || checklistScore < 8"
+                  class="w-full px-8 py-4 bg-[#0A0A0A] text-white font-bold uppercase tracking-wide text-lg border-4 border-[#0A0A0A] disabled:opacity-50 hover:bg-gray-800 transition-all">
+            {{ saving ? 'SAVING...' : 'SAVE CONTENT' }}
+          </button>
+          
+          <!-- DEVELOPER TOOLS (COLLAPSIBLE) -->
+          <details class="bg-gray-50 border-2 border-gray-300 p-4">
+            <summary class="cursor-pointer font-bold text-sm text-gray-700 uppercase tracking-wide">Developer Tools</summary>
+            <div class="mt-4 space-y-3">
               <button @click="copyTablesTSV" 
                       v-if="simpleData.structuredAsset"
-                      class="flex-1 px-4 py-3 bg-white text-[#0A0A0A] border-2 border-[#0A0A0A] font-medium uppercase text-sm btn-secondary">
-                COPY TABLES (TSV)
+                      class="w-full px-4 py-3 bg-white text-[#0A0A0A] border-2 border-[#0A0A0A] font-medium uppercase text-sm hover:bg-gray-50">
+                Copy Tables (TSV)
               </button>
               <button @click="copyConnectorScript" 
-                      class="flex-1 px-4 py-3 bg-[#00C2FF] text-[#0A0A0A] border-2 border-[#00C2FF] font-medium uppercase text-sm btn-primary">
-                GET CONNECTOR SCRIPT
+                      class="w-full px-4 py-3 bg-white text-[#0A0A0A] border-2 border-[#0A0A0A] font-medium uppercase text-sm hover:bg-gray-50">
+                Get Connector Script
+              </button>
+              <button @click="runCroutonizerFromButton" 
+                      :disabled="croutonizing || !currentPage.id"
+                      class="w-full px-4 py-3 bg-white text-[#0A0A0A] border-2 border-[#0A0A0A] font-medium uppercase text-sm disabled:opacity-50 hover:bg-gray-50">
+                {{ croutonizing ? 'Analyzing...' : 'Run Compiler' }}
               </button>
             </div>
-          </div>
-          
-          <div class="flex gap-4">
-            <button @click="saveSimplePage" 
-                    :disabled="saving || checklistScore < 8"
-                    class="flex-1 px-8 py-4 bg-[#0A0A0A] text-white font-medium uppercase tracking-wide disabled:opacity-50 btn-secondary">
-              {{ saving ? 'SAVING...' : 'SAVE CONTENT' }}
-            </button>
-            <button @click="runCroutonizerFromButton" 
-                    :disabled="croutonizing || !currentPage.id"
-                    class="flex-1 px-8 py-4 bg-[#00C2FF] text-[#0A0A0A] border-2 border-[#00C2FF] font-medium uppercase tracking-wide disabled:opacity-50 btn-primary">
-              {{ croutonizing ? 'ANALYZING...' : 'RUN COMPILER' }}
-            </button>
-          </div>
+          </details>
           
           <div class="bg-[#F8F8F8] border-2 border-[#E5E5E5] p-4 text-center">
             <div class="text-sm text-[#6B6B6B] mb-2">
@@ -635,7 +652,8 @@
             queryHeaders: { pass: true, score: 100, warnings: [] },
             factDensity: { pass: true, score: 100, warnings: [] }
           },
-          croutonizerWarnings: []
+          croutonizerWarnings: [],
+          showAllWarnings: false
         };
       },
       computed: {
@@ -807,7 +825,7 @@
           let warnings = [];
           const genericHeaders = ['introduction', 'overview', 'conclusion', 'summary', 'background', 'about', 'info', 'details'];
           
-          this.simpleData.sections.forEach(section => {
+          this.simpleData.sections.forEach((section, idx) => {
             if (!section.heading) return;
             const heading = section.heading.toLowerCase();
             const isGeneric = genericHeaders.some(g => heading === g || heading.includes(g));
@@ -817,7 +835,10 @@
               warnings.push({
                 type: 'Query-Ready Headers',
                 message: `"${section.heading}" is too generic`,
-                suggestion: 'Make query-specific: e.g., "How Entity Verification Works" not "Overview"'
+                suggestion: 'Make query-specific: e.g., "How Entity Verification Works" not "Overview"',
+                fixable: true,
+                sectionIndex: idx,
+                fixAction: 'rename-header'
               });
             }
           });
@@ -850,6 +871,25 @@
           
           this.guardrails.factDensity = { pass: score >= 70, score: Math.max(0, score), warnings };
           this.croutonizerWarnings.push(...warnings);
+        },
+        autoFixIssue(warning) {
+          if (warning.fixAction === 'rename-header' && warning.sectionIndex !== undefined) {
+            const section = this.simpleData.sections[warning.sectionIndex];
+            if (!section) return;
+            
+            // Auto-generate query-specific header from topic/content
+            const topicWords = this.simpleData.title.split(' ').slice(0, 4).join(' ');
+            const newHeader = prompt(
+              `Current header: "${section.heading}"\n\nSuggested fix:\n"How ${topicWords} Works"\n\nEnter new header:`,
+              `How ${topicWords} Works`
+            );
+            
+            if (newHeader && newHeader !== section.heading) {
+              section.heading = newHeader;
+              this.runCroutonizerChecks();
+              alert('✓ Header updated! Score recalculated.');
+            }
+          }
         },
         // ===== EXISTING METHODS =====
         getScoreStatus(score) {
