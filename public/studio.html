@@ -205,11 +205,11 @@
         </div>
 
         <!-- CROUTONIZER PANEL (Real-Time Semantic Compiler) -->
-        <div class="bg-gradient-to-br from-[#00C2FF] to-[#0099CC] border-4 border-[#0A0A0A] p-6 shadow-[12px_12px_0px_0px_rgba(0,0,0,0.3)] mb-6">
-          <div class="flex items-center justify-between mb-4">
-            <h2 class="text-2xl font-bold text-[#0A0A0A]">CROUTONIZER SCORE</h2>
-            <div class="text-6xl font-bold text-[#0A0A0A]">
-              {{ croutonizerLiveScore }}<span class="text-3xl">/100</span>
+        <div class="bg-white border-4 border-[#0A0A0A] p-6 neo-card-sm mb-6" style="background-image: repeating-linear-gradient(45deg, transparent, transparent 10px, rgba(0,0,0,0.02) 10px, rgba(0,0,0,0.02) 20px);">
+          <div class="flex items-center justify-between mb-6">
+            <h2 class="text-2xl font-bold">CROUTONIZER SCORE</h2>
+            <div class="text-6xl font-bold">
+              {{ croutonizerLiveScore }}<span class="text-3xl text-gray-500">/100</span>
             </div>
           </div>
           
@@ -218,31 +218,31 @@
               <div :class="guardrails.sectionalAnchoring.pass ? 'text-[#10B981]' : 'text-[#EF4444]'" class="text-3xl font-bold mb-1">
                 {{ guardrails.sectionalAnchoring.pass ? '✓' : '✗' }}
               </div>
-              <div class="text-xs font-bold">ANCHORING</div>
+              <div class="text-xs font-bold text-gray-700">ANCHORING</div>
             </div>
             <div class="bg-white border-2 border-[#0A0A0A] p-3 text-center">
               <div :class="guardrails.entityPersistence.pass ? 'text-[#10B981]' : 'text-[#EF4444]'" class="text-3xl font-bold mb-1">
                 {{ guardrails.entityPersistence.pass ? '✓' : '✗' }}
               </div>
-              <div class="text-xs font-bold">ENTITIES</div>
+              <div class="text-xs font-bold text-gray-700">ENTITIES</div>
             </div>
             <div class="bg-white border-2 border-[#0A0A0A] p-3 text-center">
               <div :class="guardrails.claimEvidence.pass ? 'text-[#10B981]' : 'text-[#EF4444]'" class="text-3xl font-bold mb-1">
                 {{ guardrails.claimEvidence.pass ? '✓' : '✗' }}
               </div>
-              <div class="text-xs font-bold">EVIDENCE</div>
+              <div class="text-xs font-bold text-gray-700">EVIDENCE</div>
             </div>
             <div class="bg-white border-2 border-[#0A0A0A] p-3 text-center">
               <div :class="guardrails.queryHeaders.pass ? 'text-[#10B981]' : 'text-[#EF4444]'" class="text-3xl font-bold mb-1">
                 {{ guardrails.queryHeaders.pass ? '✓' : '✗' }}
               </div>
-              <div class="text-xs font-bold">HEADERS</div>
+              <div class="text-xs font-bold text-gray-700">HEADERS</div>
             </div>
             <div class="bg-white border-2 border-[#0A0A0A] p-3 text-center">
               <div :class="guardrails.factDensity.pass ? 'text-[#10B981]' : 'text-[#EF4444]'" class="text-3xl font-bold mb-1">
                 {{ guardrails.factDensity.pass ? '✓' : '✗' }}
               </div>
-              <div class="text-xs font-bold">DENSITY</div>
+              <div class="text-xs font-bold text-gray-700">DENSITY</div>
             </div>
           </div>
           
@@ -251,11 +251,11 @@
                  class="bg-white border-2 border-[#F59E0B] p-3 text-sm">
               <div class="font-bold text-[#F59E0B] mb-1">{{ warning.type.toUpperCase() }}</div>
               <div class="text-[#0A0A0A] mb-1">{{ warning.message }}</div>
-              <div v-if="warning.suggestion" class="text-[#0A0A0A] text-xs mt-2">
+              <div v-if="warning.suggestion" class="text-gray-700 text-xs mt-2">
                 <strong>Fix:</strong> {{ warning.suggestion }}
               </div>
             </div>
-            <div v-if="croutonizerWarnings.length > 3" class="text-center text-sm text-[#0A0A0A]">
+            <div v-if="croutonizerWarnings.length > 3" class="text-center text-sm text-gray-600 font-medium">
               +{{ croutonizerWarnings.length - 3 }} more issues
             </div>
           </div>
