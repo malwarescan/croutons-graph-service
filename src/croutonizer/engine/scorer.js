@@ -47,7 +47,7 @@ function calculateScore(ast, issues, keyFacts = []) {
 
 /**
  * Calculate Fact Quality score (Rule F)
- * Based on extracted facts
+ * Based on extracted facts validation
  */
 function calculateQualityScore(ast, issues) {
   const facts = ast.facts || [];
@@ -56,29 +56,39 @@ function calculateQualityScore(ast, issues) {
     return { score: 0, max: 10, issues: 0, message: 'No facts extracted yet' };
   }
   
-  // Count valid facts
-  const validFacts = facts.filter(fact => {
-    // Check for pronouns
-    if (/\b(it|this|that|these|those)\b/i.test(fact.subject) ||
-        /\b(it|this|that|these|those)\b/i.test(fact.object)) {
-      return false;
+  // Get quality issues from linter
+  const qualityIssues = issues.filter(i => i.rule === 'factQuality');
+  
+  // Count valid facts (facts without quality issues)
+  const factsWithIssues = new Set();
+  qualityIssues.forEach(issue => {
+    if (issue.location && issue.location.fact_index !== undefined) {
+      factsWithIssues.add(issue.location.fact_index);
     }
-    
-    // Check for grounding
-    if (fact.grounded === false) return false;
-    
-    return true;
   });
   
-  const validRatio = validFacts.length / facts.length;
-  const score = Math.round(10 * validRatio);
+  const validFacts = facts.length - factsWithIssues.size;
+  const validRatio = facts.length > 0 ? validFacts / facts.length : 0;
+  
+  // Base score from valid ratio
+  let baseScore = 10 * validRatio;
+  
+  // Apply issue penalties
+  const errorCount = qualityIssues.filter(i => i.type === 'error').length;
+  const warningCount = qualityIssues.filter(i => i.type === 'warning').length;
+  
+  const errorPenalty = errorCount * 2;
+  const warningPenalty = warningCount * 0.5;
+  
+  const finalScore = Math.max(0, Math.round(baseScore - errorPenalty - warningPenalty));
   
   return {
-    score,
+    score: finalScore,
     max: 10,
-    issues: facts.length - validFacts.length,
-    valid_facts: validFacts.length,
-    total_facts: facts.length
+    issues: qualityIssues.length,
+    valid_facts: validFacts,
+    total_facts: facts.length,
+    quality_rate: Math.round(validRatio * 100) + '%'
   };
 }
 

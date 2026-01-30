@@ -7,6 +7,7 @@ const { checkEntityPersistence } = require('../rules/entityPersistence');
 const { checkClaimEvidence } = require('../rules/claimEvidence');
 const { checkHeaderSpecificity } = require('../rules/headerSpecificity');
 const { checkFactDensity } = require('../rules/factDensity');
+const { checkFactQuality } = require('../rules/factQuality');
 const { extractEntities } = require('./parser');
 
 /**
@@ -53,6 +54,10 @@ async function runLinter(ast, keyFacts = []) {
   const extractedFacts = ast.facts || [];
   const densityIssues = checkFactDensity(ast, extractedFacts);
   issues.push(...densityIssues);
+  
+  // Run Rule F: Fact Quality
+  const qualityIssues = checkFactQuality(extractedFacts);
+  issues.push(...qualityIssues);
   
   return issues;
 }
