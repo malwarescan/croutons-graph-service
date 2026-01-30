@@ -2,82 +2,115 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=5, user-scalable=yes">
+  <meta name="format-detection" content="telephone=no">
   <title>Page Compliance Studio | Croutons</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
   <style>
     [v-cloak] { display: none; }
-    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; }
+    body { font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif; }
+    code, .font-mono { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+    
+    /* Mobile optimizations */
+    @media (max-width: 768px) {
+      button, .btn { 
+        min-height: 44px; 
+        min-width: 44px; 
+        touch-action: manipulation; 
+        padding: 10px 16px;
+      }
+      h1 { font-size: 1.75rem !important; }
+      h2 { font-size: 1.25rem !important; }
+    }
+    @media (max-width: 640px) {
+      .grid { gap: 1rem !important; }
+      .border-2 { border-width: 1px; }
+    }
+    @media (max-width: 480px) {
+      body { font-size: 14px; }
+      .text-sm { font-size: 12px; }
+      .text-xs { font-size: 11px; }
+    }
   </style>
 </head>
 <body class="bg-[#F8F8F8] min-h-screen">
   <div id="app" v-cloak>
     <!-- Header -->
-    <header class="bg-[#0A0A0A] text-white py-4 px-6 border-b-4 border-[#00C2FF]">
-      <div class="max-w-7xl mx-auto flex items-center justify-between">
-        <div class="flex items-center gap-4">
-          <h1 class="text-2xl font-bold">Page Compliance Studio</h1>
-          <span class="text-xs font-mono text-[#00C2FF]">INTERNAL ONLY</span>
+    <section class="w-full bg-white py-8 md:py-12 px-4 md:px-8 border-b-2 border-[#0A0A0A]">
+      <div class="max-w-6xl mx-auto">
+        <div class="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 mb-6">
+          <div>
+            <h1 class="text-2xl md:text-4xl font-bold text-[#0A0A0A] mb-2">
+              Page Compliance Studio
+            </h1>
+            <p class="text-sm md:text-base text-[#6B6B6B]">
+              Guided authoring with A-J protocol compliance • <span class="font-mono text-xs text-[#00C2FF]">INTERNAL ONLY</span>
+            </p>
+          </div>
+          <div class="flex gap-2 w-full md:w-auto">
+            <button @click="view='list'" 
+                    :class="view==='list' ? 'bg-[#0A0A0A] text-white' : 'bg-white text-[#0A0A0A] border-2 border-[#0A0A0A]'"
+                    class="flex-1 md:flex-none px-6 py-3 md:py-2 rounded-lg font-medium text-sm hover:bg-[#00C2FF] hover:text-[#0A0A0A] hover:border-[#00C2FF] transition-colors duration-200">
+              Pages
+            </button>
+            <button @click="startWizard" 
+                    class="flex-1 md:flex-none px-6 py-3 md:py-2 bg-[#00C2FF] text-[#0A0A0A] rounded-lg font-medium text-sm hover:bg-[#0A0A0A] hover:text-white transition-colors duration-200">
+              + New Page
+            </button>
+          </div>
         </div>
-        <div class="flex gap-3">
-          <button @click="view='list'" 
-                  :class="view==='list' ? 'bg-[#00C2FF] text-[#0A0A0A]' : 'bg-white/10'"
-                  class="px-4 py-2 rounded font-medium text-sm">
-            Pages
-          </button>
-          <button @click="startWizard" 
-                  class="px-4 py-2 bg-[#00C2FF] text-[#0A0A0A] rounded font-medium text-sm hover:bg-[#00D4FF]">
-            + New Page
+      </div>
+    </section>
+
+    <!-- API Key Input (if not set) -->
+    <div v-if="!apiKey" class="max-w-6xl mx-auto mt-8 md:mt-12 px-4">
+      <div class="border-2 border-[#0A0A0A] p-6 md:p-8 bg-white">
+        <h2 class="text-xl md:text-2xl font-bold text-[#0A0A0A] mb-4">Studio API Key Required</h2>
+        <p class="text-sm md:text-base text-[#6B6B6B] mb-6">
+          Enter your Studio API key to access Page Compliance Studio. Contact your team lead for access.
+        </p>
+        <div class="space-y-4">
+          <input 
+            v-model="apiKeyInput"
+            type="password"
+            placeholder="Enter API key..."
+            class="w-full px-4 py-3 border-2 border-[#0A0A0A] rounded-lg font-mono text-sm"
+            @keyup.enter="setApiKey">
+          <button @click="setApiKey" 
+                  class="w-full md:w-auto px-8 py-3 bg-[#0A0A0A] text-white rounded-lg font-medium hover:bg-[#00C2FF] transition-colors duration-200">
+            Access Studio
           </button>
         </div>
       </div>
-    </header>
-
-    <!-- API Key Input (if not set) -->
-    <div v-if="!apiKey" class="max-w-2xl mx-auto mt-12 p-8 bg-white border-2 border-[#0A0A0A] rounded-lg">
-      <h2 class="text-xl font-bold mb-4">Studio API Key Required</h2>
-      <p class="text-sm text-[#6B6B6B] mb-4">
-        Enter your Studio API key to access Page Compliance Studio.
-      </p>
-      <input 
-        v-model="apiKeyInput"
-        type="password"
-        placeholder="Enter API key..."
-        class="w-full px-4 py-2 border-2 border-[#0A0A0A] rounded font-mono mb-4"
-        @keyup.enter="setApiKey">
-      <button @click="setApiKey" 
-              class="px-6 py-2 bg-[#0A0A0A] text-white rounded font-medium hover:bg-[#00C2FF]">
-        Access Studio
-      </button>
     </div>
 
     <!-- Main Content (only show if API key is set) -->
-    <div v-if="apiKey" class="max-w-7xl mx-auto p-6">
+    <div v-if="apiKey" class="max-w-6xl mx-auto p-4 md:p-8">
       
       <!-- List View -->
       <div v-if="view==='list'" class="space-y-6">
-        <div class="bg-white border-2 border-[#0A0A0A] rounded-lg p-6">
-          <div class="flex items-center justify-between mb-6">
-            <h2 class="text-2xl font-bold">Pages</h2>
+        <div class="bg-white border-2 border-[#0A0A0A] p-6 md:p-8">
+          <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 mb-6">
+            <h2 class="text-xl md:text-2xl font-bold text-[#0A0A0A]">Pages</h2>
             <button @click="loadPages" 
                     :disabled="pages.loading"
-                    class="px-4 py-2 border-2 border-[#0A0A0A] rounded font-medium hover:bg-[#F8F8F8]">
+                    class="w-full sm:w-auto px-6 py-3 md:py-2 bg-[#0A0A0A] text-white font-medium hover:bg-[#00C2FF] transition-colors duration-200 rounded-lg disabled:bg-[#6B6B6B] disabled:opacity-60 disabled:cursor-not-allowed">
               {{ pages.loading ? 'Loading...' : 'Refresh' }}
             </button>
           </div>
 
-          <div v-if="pages.error" class="border-2 border-[#EF4444] bg-[#FEE] p-4 rounded mb-4">
+          <div v-if="pages.error" class="border-2 border-[#EF4444] bg-red-50 p-4 rounded-lg mb-4 text-sm text-[#EF4444]">
             {{ pages.error }}
           </div>
 
-          <div v-if="pages.data.length === 0" class="text-center py-12 text-[#6B6B6B]">
-            No pages yet. Create your first page to get started.
+          <div v-if="pages.data.length === 0 && !pages.loading" class="text-center py-12 text-[#6B6B6B] text-sm md:text-base">
+            No pages yet. Click "+ New Page" to get started.
           </div>
 
           <div v-if="pages.data.length > 0" class="space-y-3">
             <div v-for="page in pages.data" :key="page.id" 
-                 class="border-2 border-[#0A0A0A] rounded-lg p-4 hover:bg-[#F8F8F8] cursor-pointer"
+                 class="border-2 border-[#0A0A0A] rounded-lg p-4 hover:bg-[#F8F8F8] cursor-pointer transition-colors duration-200"
                  @click="openBuilder(page.id)">
               <div class="flex items-start justify-between">
                 <div class="flex-1">
@@ -105,66 +138,66 @@
       </div>
 
       <!-- Wizard View -->
-      <div v-if="view==='wizard'" class="bg-white border-2 border-[#0A0A0A] rounded-lg p-8 max-w-3xl mx-auto">
+      <div v-if="view==='wizard'" class="bg-white border-2 border-[#0A0A0A] p-6 md:p-8 max-w-3xl mx-auto">
         <div class="flex items-center justify-between mb-6">
-          <h2 class="text-2xl font-bold">Create New Page</h2>
-          <button @click="view='list'" class="text-sm text-[#6B6B6B] hover:text-[#0A0A0A]">
+          <h2 class="text-xl md:text-2xl font-bold text-[#0A0A0A]">Create New Page</h2>
+          <button @click="view='list'" class="text-sm text-[#6B6B6B] hover:text-[#0A0A0A] transition-colors duration-200">
             Cancel
           </button>
         </div>
 
         <div class="space-y-6">
           <div>
-            <label class="block text-sm font-medium mb-2">Page Type *</label>
+            <label class="block text-sm font-bold text-[#0A0A0A] mb-2">Page Type *</label>
             <select v-model="wizard.page_type" 
-                    class="w-full px-4 py-2 border-2 border-[#0A0A0A] rounded font-mono">
+                    class="w-full px-4 py-3 border-2 border-[#0A0A0A] rounded-lg font-mono text-sm">
               <option value="">Choose template...</option>
               <option v-for="t in templates" :key="t.key" :value="t.key">
                 {{ t.name }}
               </option>
             </select>
-            <div v-if="wizard.page_type" class="mt-2 text-xs text-[#6B6B6B]">
-              Required sections: {{ getTemplate(wizard.page_type).required_sections.length }}
+            <div v-if="wizard.page_type" class="mt-2 text-xs text-[#6B6B6B] font-mono">
+              ✓ Required sections: {{ getTemplate(wizard.page_type).required_sections.length }}
             </div>
           </div>
 
           <div>
-            <label class="block text-sm font-medium mb-2">Domain</label>
+            <label class="block text-sm font-bold text-[#0A0A0A] mb-2">Domain</label>
             <input v-model="wizard.domain" 
                    type="text" 
                    placeholder="example.com"
-                   class="w-full px-4 py-2 border-2 border-[#0A0A0A] rounded font-mono">
+                   class="w-full px-4 py-3 border-2 border-[#0A0A0A] rounded-lg font-mono text-sm">
             <div class="mt-1 text-xs text-[#6B6B6B]">Optional for drafts</div>
           </div>
 
           <div>
-            <label class="block text-sm font-medium mb-2">Path *</label>
+            <label class="block text-sm font-bold text-[#0A0A0A] mb-2">Path *</label>
             <input v-model="wizard.path" 
                    type="text" 
                    placeholder="/pricing"
-                   class="w-full px-4 py-2 border-2 border-[#0A0A0A] rounded font-mono">
+                   class="w-full px-4 py-3 border-2 border-[#0A0A0A] rounded-lg font-mono text-sm">
           </div>
 
           <div>
-            <label class="block text-sm font-medium mb-2">Title *</label>
+            <label class="block text-sm font-bold text-[#0A0A0A] mb-2">Title *</label>
             <input v-model="wizard.title" 
                    type="text" 
                    placeholder="Product Name or Page Title"
-                   class="w-full px-4 py-2 border-2 border-[#0A0A0A] rounded">
+                   class="w-full px-4 py-3 border-2 border-[#0A0A0A] rounded-lg text-sm">
           </div>
 
           <div>
-            <label class="block text-sm font-medium mb-2">Source URL</label>
+            <label class="block text-sm font-bold text-[#0A0A0A] mb-2">Source URL</label>
             <input v-model="wizard.source_url" 
                    type="text" 
                    placeholder="https://example.com/pricing"
-                   class="w-full px-4 py-2 border-2 border-[#0A0A0A] rounded font-mono">
+                   class="w-full px-4 py-3 border-2 border-[#0A0A0A] rounded-lg font-mono text-sm">
             <div class="mt-1 text-xs text-[#6B6B6B]">Auto-generated from domain + path if empty</div>
           </div>
 
           <button @click="createPageFromWizard" 
                   :disabled="!wizard.page_type || !wizard.path || !wizard.title || wizard.loading"
-                  class="w-full px-6 py-3 bg-[#0A0A0A] text-white rounded font-medium hover:bg-[#00C2FF] disabled:opacity-50 disabled:cursor-not-allowed">
+                  class="w-full px-8 py-3 bg-[#0A0A0A] text-white rounded-lg font-medium hover:bg-[#00C2FF] disabled:bg-[#6B6B6B] disabled:opacity-60 disabled:cursor-not-allowed transition-colors duration-200">
             {{ wizard.loading ? 'Creating...' : 'Create Page' }}
           </button>
         </div>
@@ -173,101 +206,101 @@
       <!-- Builder View -->
       <div v-if="view==='builder' && currentPage" class="space-y-6">
         <!-- Page Header -->
-        <div class="bg-white border-2 border-[#0A0A0A] rounded-lg p-6">
-          <div class="flex items-start justify-between">
+        <div class="bg-white border-2 border-[#0A0A0A] p-6 md:p-8">
+          <div class="flex flex-col md:flex-row items-start justify-between gap-4">
             <div class="flex-1">
-              <h2 class="text-2xl font-bold">{{ currentPage.title }}</h2>
-              <div class="font-mono text-sm text-[#6B6B6B] mt-1">
+              <h2 class="text-xl md:text-2xl font-bold text-[#0A0A0A]">{{ currentPage.title }}</h2>
+              <div class="font-mono text-sm text-[#6B6B6B] mt-2">
                 {{ currentPage.domain || 'draft' }}{{ currentPage.path }}
               </div>
               <div class="flex gap-2 mt-3">
-                <span class="px-3 py-1 bg-[#00C2FF]/10 text-[#00C2FF] text-sm font-mono rounded">
+                <span class="px-3 py-1 bg-[#00C2FF]/10 text-[#00C2FF] text-xs font-mono rounded-full border border-[#00C2FF]">
                   {{ currentPage.page_type }}
                 </span>
-                <span class="px-3 py-1 text-sm font-mono rounded"
-                      :class="currentPage.status==='ready' ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-700'">
-                  {{ currentPage.status }}
+                <span class="px-3 py-1 text-xs font-mono rounded-full border"
+                      :class="currentPage.status==='ready' ? 'bg-[#25D366]/10 text-[#25D366] border-[#25D366]' : 'bg-gray-100 text-[#6B6B6B] border-[#6B6B6B]'">
+                  {{ currentPage.status.toUpperCase() }}
                 </span>
               </div>
             </div>
-            <div class="flex gap-2">
+            <div class="flex flex-col sm:flex-row gap-2 w-full md:w-auto">
               <button @click="view='list'" 
-                      class="px-4 py-2 border-2 border-[#0A0A0A] rounded font-medium hover:bg-[#F8F8F8]">
-                Back to List
+                      class="px-6 py-3 md:py-2 border-2 border-[#0A0A0A] rounded-lg font-medium hover:bg-[#F8F8F8] transition-colors duration-200">
+                Back
               </button>
               <button @click="saveAll" 
                       :disabled="builder.saving"
-                      class="px-4 py-2 bg-[#0A0A0A] text-white rounded font-medium hover:bg-[#00C2FF]">
+                      class="px-6 py-3 md:py-2 bg-[#0A0A0A] text-white rounded-lg font-medium hover:bg-[#00C2FF] disabled:bg-[#6B6B6B] disabled:opacity-60 transition-colors duration-200">
                 {{ builder.saving ? 'Saving...' : 'Save All' }}
               </button>
               <button @click="generateAll" 
                       :disabled="builder.generating"
-                      class="px-4 py-2 bg-[#00C2FF] text-[#0A0A0A] rounded font-medium hover:bg-[#00D4FF]">
-                {{ builder.generating ? 'Generating...' : 'Generate Artifacts' }}
+                      class="px-6 py-3 md:py-2 bg-[#00C2FF] text-[#0A0A0A] rounded-lg font-medium hover:bg-[#0A0A0A] hover:text-white disabled:bg-[#6B6B6B] disabled:opacity-60 transition-colors duration-200">
+                {{ builder.generating ? 'Generating...' : 'Generate' }}
               </button>
             </div>
           </div>
         </div>
 
         <!-- Tabs -->
-        <div class="bg-white border-2 border-[#0A0A0A] rounded-lg">
-          <div class="flex border-b-2 border-[#0A0A0A]">
+        <div class="bg-white border-2 border-[#0A0A0A]">
+          <div class="flex overflow-x-auto border-b-2 border-[#0A0A0A]">
             <button @click="builderTab='sections'"
-                    :class="builderTab==='sections' ? 'font-bold text-[#00C2FF] border-b-2 border-[#00C2FF] -mb-[2px]' : 'text-[#6B6B6B]'"
-                    class="px-6 py-3 font-mono text-sm uppercase">
+                    :class="builderTab==='sections' ? 'font-bold text-[#00C2FF] border-b-2 border-[#00C2FF] -mb-[2px]' : 'text-[#6B6B6B] hover:text-[#0A0A0A]'"
+                    class="px-6 py-3 font-mono text-xs md:text-sm uppercase tracking-wider transition-colors duration-200 whitespace-nowrap">
               Sections & Facts
             </button>
             <button @click="builderTab='preview'"
-                    :class="builderTab==='preview' ? 'font-bold text-[#00C2FF] border-b-2 border-[#00C2FF] -mb-[2px]' : 'text-[#6B6B6B]'"
-                    class="px-6 py-3 font-mono text-sm uppercase">
+                    :class="builderTab==='preview' ? 'font-bold text-[#00C2FF] border-b-2 border-[#00C2FF] -mb-[2px]' : 'text-[#6B6B6B] hover:text-[#0A0A0A]'"
+                    class="px-6 py-3 font-mono text-xs md:text-sm uppercase tracking-wider transition-colors duration-200 whitespace-nowrap">
               Preview
             </button>
             <button @click="builderTab='compliance'"
-                    :class="builderTab==='compliance' ? 'font-bold text-[#00C2FF] border-b-2 border-[#00C2FF] -mb-[2px]' : 'text-[#6B6B6B]'"
-                    class="px-6 py-3 font-mono text-sm uppercase">
+                    :class="builderTab==='compliance' ? 'font-bold text-[#00C2FF] border-b-2 border-[#00C2FF] -mb-[2px]' : 'text-[#6B6B6B] hover:text-[#0A0A0A]'"
+                    class="px-6 py-3 font-mono text-xs md:text-sm uppercase tracking-wider transition-colors duration-200 whitespace-nowrap">
               Compliance
             </button>
           </div>
 
           <!-- Sections & Facts Tab -->
-          <div v-if="builderTab==='sections'" class="p-6 space-y-6">
+          <div v-if="builderTab==='sections'" class="p-6 md:p-8 space-y-6">
             <div v-for="(section, idx) in builder.sections" :key="section.id" 
-                 class="border-2 border-[#0A0A0A] rounded-lg p-4">
-              <div class="flex items-center justify-between mb-3">
-                <h3 class="font-bold">{{ section.heading || section.section_key }}</h3>
-                <span class="text-xs font-mono text-[#6B6B6B]">#{{ section.order_index }}</span>
+                 class="border-2 border-[#0A0A0A] rounded-lg p-4 md:p-6">
+              <div class="flex items-center justify-between mb-4">
+                <h3 class="font-bold text-[#0A0A0A]">{{ section.heading || section.section_key }}</h3>
+                <span class="text-xs font-mono text-[#6B6B6B] bg-[#F8F8F8] px-2 py-1 rounded">#{{ section.order_index }}</span>
               </div>
 
-              <div class="mb-4">
-                <label class="block text-sm font-medium mb-2">Narrative</label>
+              <div class="mb-6">
+                <label class="block text-sm font-bold text-[#0A0A0A] mb-2">Narrative</label>
                 <textarea v-model="section.narrative_md"
                           rows="4"
                           placeholder="Write narrative content for this section..."
-                          class="w-full px-3 py-2 border-2 border-[#0A0A0A] rounded font-mono text-sm resize-y">
+                          class="w-full px-4 py-3 border-2 border-[#0A0A0A] rounded-lg text-sm resize-y">
                 </textarea>
               </div>
 
               <div>
-                <label class="block text-sm font-medium mb-2">Atomic Facts</label>
+                <label class="block text-sm font-bold text-[#0A0A0A] mb-2">Atomic Facts</label>
                 <div class="space-y-2">
                   <div v-for="(fact, factIdx) in getFactsForSection(section.id)" :key="factIdx"
-                       class="flex gap-2 items-start">
+                       class="flex flex-col md:flex-row gap-2">
                     <input v-model="fact.subject" 
                            placeholder="Subject"
-                           class="flex-1 px-3 py-2 border-2 border-[#0A0A0A] rounded text-sm">
+                           class="flex-1 px-3 py-2 border-2 border-[#0A0A0A] rounded-lg text-sm font-mono">
                     <input v-model="fact.predicate" 
                            placeholder="Predicate"
-                           class="flex-1 px-3 py-2 border-2 border-[#0A0A0A] rounded text-sm">
+                           class="flex-1 px-3 py-2 border-2 border-[#0A0A0A] rounded-lg text-sm font-mono">
                     <input v-model="fact.object" 
                            placeholder="Object"
-                           class="flex-1 px-3 py-2 border-2 border-[#0A0A0A] rounded text-sm">
+                           class="flex-1 px-3 py-2 border-2 border-[#0A0A0A] rounded-lg text-sm font-mono">
                     <button @click="removeFact(factIdx)" 
-                            class="px-3 py-2 border-2 border-[#EF4444] text-[#EF4444] rounded hover:bg-[#EF4444] hover:text-white">
+                            class="px-4 py-2 border-2 border-[#EF4444] text-[#EF4444] rounded-lg hover:bg-[#EF4444] hover:text-white transition-colors duration-200 font-bold">
                       ×
                     </button>
                   </div>
                   <button @click="addFact(section.id)" 
-                          class="w-full px-4 py-2 border-2 border-[#0A0A0A] rounded text-sm hover:bg-[#F8F8F8]">
+                          class="w-full px-4 py-3 border-2 border-[#0A0A0A] rounded-lg text-sm font-medium hover:bg-[#F8F8F8] transition-colors duration-200">
                     + Add Fact
                   </button>
                 </div>
@@ -314,35 +347,36 @@
           </div>
 
           <!-- Compliance Tab -->
-          <div v-if="builderTab==='compliance'" class="p-6">
-            <div v-if="compliance.loading" class="text-center py-12 text-[#6B6B6B]">
+          <div v-if="builderTab==='compliance'" class="p-6 md:p-8">
+            <div v-if="compliance.loading" class="text-center py-12 text-[#6B6B6B] text-sm">
               Loading compliance report...
             </div>
 
             <div v-if="compliance.data" class="space-y-6">
-              <div class="flex items-center justify-between">
+              <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
                 <div>
-                  <div class="text-4xl font-bold" 
+                  <div class="text-5xl font-bold font-mono" 
                        :class="compliance.data.score >= 80 ? 'text-[#25D366]' : compliance.data.score >= 60 ? 'text-[#FF9500]' : 'text-[#EF4444]'">
                     {{ compliance.data.score }}%
                   </div>
-                  <div class="text-sm text-[#6B6B6B]">
+                  <div class="text-sm text-[#6B6B6B] font-mono mt-2">
                     {{ compliance.data.checks_passed }}/{{ compliance.data.checks_run }} checks passed
                   </div>
                 </div>
                 <button @click="loadCompliance(currentPage.id)" 
-                        class="px-4 py-2 border-2 border-[#0A0A0A] rounded text-sm hover:bg-[#F8F8F8]">
+                        class="px-6 py-3 md:py-2 bg-[#0A0A0A] text-white rounded-lg font-medium hover:bg-[#00C2FF] transition-colors duration-200">
                   Refresh
                 </button>
               </div>
 
               <!-- A-J Grid -->
-              <div class="grid grid-cols-5 gap-3">
+              <div class="grid grid-cols-5 gap-2 md:gap-3">
                 <div v-for="(status, letter) in compliance.data.status" :key="letter"
-                     class="border-2 p-3 rounded text-center"
-                     :class="status === true ? 'border-[#25D366] bg-green-50' : status === false ? 'border-[#EF4444] bg-red-50' : 'border-[#6B6B6B] bg-gray-50'">
-                  <div class="text-2xl font-bold font-mono">{{ letter }}</div>
-                  <div class="text-xs mt-1">
+                     class="border-2 p-4 rounded-lg text-center"
+                     :class="status === true ? 'border-[#25D366] bg-[#25D366]/10' : status === false ? 'border-[#EF4444] bg-[#EF4444]/10' : 'border-[#6B6B6B] bg-gray-50'">
+                  <div class="text-2xl md:text-3xl font-bold font-mono">{{ letter }}</div>
+                  <div class="text-xs font-mono mt-1"
+                       :class="status === true ? 'text-[#25D366]' : status === false ? 'text-[#EF4444]' : 'text-[#6B6B6B]'">
                     {{ status === true ? 'PASS' : status === false ? 'FAIL' : 'N/A' }}
                   </div>
                 </div>
@@ -350,24 +384,28 @@
 
               <!-- Issues List -->
               <div v-if="compliance.data.issues.length > 0">
-                <h3 class="font-bold mb-3">Issues to Fix ({{ compliance.data.issues.length }})</h3>
-                <div class="space-y-2">
+                <h3 class="font-bold text-[#0A0A0A] mb-4">Issues to Fix ({{ compliance.data.issues.length }})</h3>
+                <div class="space-y-3">
                   <div v-for="(issue, idx) in compliance.data.issues" :key="idx"
-                       class="border-2 rounded p-3"
-                       :class="issue.severity==='error' ? 'border-[#EF4444] bg-red-50' : 'border-[#FF9500] bg-orange-50'">
-                    <div class="flex items-start gap-2">
-                      <span class="font-mono font-bold text-sm">{{ issue.requirement }}:</span>
+                       class="border-2 rounded-lg p-4"
+                       :class="issue.severity==='error' ? 'border-[#EF4444] bg-[#EF4444]/10' : 'border-[#FF9500] bg-[#FF9500]/10'">
+                    <div class="flex items-start gap-3">
+                      <span class="font-mono font-bold text-sm px-2 py-1 rounded"
+                            :class="issue.severity==='error' ? 'bg-[#EF4444] text-white' : 'bg-[#FF9500] text-white'">
+                        {{ issue.requirement }}
+                      </span>
                       <div class="flex-1">
-                        <div class="text-sm">{{ issue.message }}</div>
-                        <div class="text-xs text-[#6B6B6B] mt-1">Fix: {{ issue.fix_action }}</div>
+                        <div class="text-sm text-[#0A0A0A] font-medium">{{ issue.message }}</div>
+                        <div class="text-xs text-[#6B6B6B] mt-2 font-mono">→ {{ issue.fix_action }}</div>
                       </div>
                     </div>
                   </div>
                 </div>
               </div>
 
-              <div v-if="compliance.data.issues.length === 0" class="text-center py-6 text-[#25D366] font-medium">
-                ✅ All checks passed! This page is compliant.
+              <div v-if="compliance.data.issues.length === 0" class="border-2 border-[#25D366] bg-[#25D366]/10 rounded-lg p-6 text-center">
+                <div class="text-2xl mb-2">✅</div>
+                <div class="text-sm font-bold text-[#25D366]">All checks passed! This page is compliant.</div>
               </div>
             </div>
           </div>
@@ -377,7 +415,7 @@
 
     <!-- Toast Notification -->
     <div v-if="toast.show"
-         class="fixed bottom-4 right-4 px-6 py-3 bg-white border-2 border-[#0A0A0A] rounded shadow-lg font-mono text-sm">
+         class="fixed bottom-4 right-4 px-6 py-3 bg-white border-2 border-[#0A0A0A] rounded-lg shadow-lg font-mono text-sm z-50 max-w-sm">
       {{ toast.message }}
     </div>
   </div>
