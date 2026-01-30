@@ -1,0 +1,394 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Croutons Writer - AI-Ready Content Studio</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+  <style>
+    [v-cloak] { display: none; }
+    body { 
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: #FAFAFA;
+    }
+    .editor-container {
+      background: white;
+      border: 2px solid #E5E5E5;
+      border-radius: 8px;
+      padding: 24px;
+      min-height: 400px;
+    }
+    .score-badge {
+      font-size: 3rem;
+      font-weight: bold;
+      line-height: 1;
+    }
+    .suggestion-card {
+      background: #FFF9E6;
+      border-left: 4px solid #FFB800;
+      padding: 16px;
+      margin-bottom: 12px;
+    }
+    .fact-card {
+      background: #F0F9FF;
+      border-left: 4px solid #00C2FF;
+      padding: 12px;
+      margin-bottom: 8px;
+    }
+    .good { color: #10B981; }
+    .warning { color: #F59E0B; }
+    .bad { color: #EF4444; }
+  </style>
+</head>
+<body>
+  <div id="app" v-cloak>
+    <!-- Header -->
+    <header class="bg-white border-b-2 border-gray-200 py-6 px-8">
+      <div class="max-w-6xl mx-auto">
+        <h1 class="text-3xl font-bold text-gray-900">✍️ Croutons Writer</h1>
+        <p class="text-gray-600 mt-1">Write LLM-ready blog posts with AI guidance</p>
+      </div>
+    </header>
+
+    <!-- Main Content -->
+    <div class="max-w-6xl mx-auto px-8 py-12">
+      
+      <!-- Two Column Layout -->
+      <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        
+        <!-- LEFT: Editor (2/3) -->
+        <div class="lg:col-span-2">
+          
+          <!-- Title -->
+          <div class="mb-6">
+            <label class="block text-sm font-bold text-gray-700 mb-2">Article Title</label>
+            <input v-model="content.title" 
+                   type="text"
+                   placeholder="e.g., How to Optimize Your Website for AI Search Engines"
+                   class="w-full px-4 py-3 text-xl font-bold border-2 border-gray-300 rounded-lg focus:border-blue-500 focus:outline-none"
+                   @input="calculateScore">
+          </div>
+
+          <!-- Hook/Intro -->
+          <div class="mb-6">
+            <label class="block text-sm font-bold text-gray-700 mb-2">Opening Hook (1-2 sentences)</label>
+            <textarea v-model="content.hook" 
+                      rows="2"
+                      placeholder="e.g., AI search engines are changing how people find information online. Here's what you need to know to stay visible."
+                      class="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:border-blue-500 focus:outline-none"
+                      @input="calculateScore"></textarea>
+          </div>
+
+          <!-- Main Content -->
+          <div class="mb-6">
+            <label class="block text-sm font-bold text-gray-700 mb-2">
+              Article Content
+              <span class="text-gray-500 font-normal">({{ wordCount }} words)</span>
+            </label>
+            <textarea v-model="content.body" 
+                      rows="20"
+                      placeholder="Write your blog post here. Be specific, use real numbers, name entities explicitly. Avoid pronouns like 'it' or 'this'."
+                      class="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:border-blue-500 focus:outline-none font-mono text-sm leading-relaxed"
+                      @input="calculateScore"></textarea>
+          </div>
+
+          <!-- Action Buttons -->
+          <div class="flex gap-4">
+            <button @click="analyzeLLMReadiness" 
+                    :disabled="analyzing || !content.body"
+                    class="flex-1 px-6 py-3 bg-blue-600 text-white font-bold rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed">
+              {{ analyzing ? '🤖 Analyzing...' : '🤖 Analyze LLM Readiness' }}
+            </button>
+            <button @click="copyImprovedContent" 
+                    :disabled="!hasAnalyzed"
+                    class="flex-1 px-6 py-3 bg-green-600 text-white font-bold rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed">
+              📋 Copy Improved Version
+            </button>
+          </div>
+
+        </div>
+
+        <!-- RIGHT: Feedback Panel (1/3) -->
+        <div class="lg:col-span-1">
+          
+          <!-- LLM Readiness Score -->
+          <div class="bg-white rounded-lg border-2 border-gray-200 p-6 mb-6 text-center">
+            <div class="text-sm font-bold text-gray-600 mb-2">LLM READINESS</div>
+            <div class="score-badge" :class="scoreClass">{{ score }}%</div>
+            <div class="text-sm text-gray-600 mt-2">{{ scoreLabel }}</div>
+          </div>
+
+          <!-- Quick Stats -->
+          <div class="bg-white rounded-lg border-2 border-gray-200 p-6 mb-6">
+            <h3 class="font-bold text-gray-900 mb-4">Quick Stats</h3>
+            <div class="space-y-3">
+              <div class="flex justify-between items-center">
+                <span class="text-gray-700">Word Count</span>
+                <span class="font-bold" :class="wordCount >= 500 ? 'good' : 'warning'">{{ wordCount }}</span>
+              </div>
+              <div class="flex justify-between items-center">
+                <span class="text-gray-700">Facts Found</span>
+                <span class="font-bold" :class="extractedFacts.length >= 5 ? 'good' : 'warning'">{{ extractedFacts.length }}</span>
+              </div>
+              <div class="flex justify-between items-center">
+                <span class="text-gray-700">Pronouns</span>
+                <span class="font-bold" :class="pronounCount === 0 ? 'good' : 'warning'">{{ pronounCount }}</span>
+              </div>
+              <div class="flex justify-between items-center">
+                <span class="text-gray-700">Numbers/Data</span>
+                <span class="font-bold" :class="numberCount >= 3 ? 'good' : 'warning'">{{ numberCount }}</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Extracted Facts -->
+          <div v-if="extractedFacts.length > 0" class="bg-white rounded-lg border-2 border-gray-200 p-6 mb-6">
+            <h3 class="font-bold text-gray-900 mb-4">✅ AI Extracted Facts</h3>
+            <div v-for="(fact, idx) in extractedFacts" :key="idx" class="fact-card">
+              <div class="text-sm font-mono leading-relaxed">{{ fact.subject }} {{ fact.predicate }} {{ fact.object }}</div>
+            </div>
+          </div>
+
+          <!-- Suggestions -->
+          <div v-if="suggestions.length > 0" class="bg-white rounded-lg border-2 border-gray-200 p-6">
+            <h3 class="font-bold text-gray-900 mb-4">💡 Suggestions</h3>
+            <div v-for="(sug, idx) in suggestions" :key="idx" class="suggestion-card">
+              <div class="font-bold text-sm text-gray-900 mb-1">{{ sug.title }}</div>
+              <div class="text-sm text-gray-700">{{ sug.message }}</div>
+            </div>
+          </div>
+
+        </div>
+
+      </div>
+
+    </div>
+
+    <!-- Toast Notifications -->
+    <div v-if="toast.show" class="fixed bottom-8 right-8 bg-gray-900 text-white px-6 py-4 rounded-lg shadow-xl">
+      {{ toast.message }}
+    </div>
+
+  </div>
+
+  <script>
+    const { createApp } = Vue;
+
+    createApp({
+      data() {
+        return {
+          content: {
+            title: '',
+            hook: '',
+            body: ''
+          },
+          analyzing: false,
+          hasAnalyzed: false,
+          score: 0,
+          extractedFacts: [],
+          suggestions: [],
+          toast: {
+            show: false,
+            message: ''
+          }
+        };
+      },
+      computed: {
+        wordCount() {
+          return this.content.body.split(/\s+/).filter(w => w.length > 0).length;
+        },
+        pronounCount() {
+          const pronouns = /\b(it|this|that|these|those|they|them)\b/gi;
+          return (this.content.body.match(pronouns) || []).length;
+        },
+        numberCount() {
+          const numbers = /\b\d+[%$€£¥]?\b|\$\d+|\d+%/g;
+          return (this.content.body.match(numbers) || []).length;
+        },
+        scoreClass() {
+          if (this.score >= 80) return 'good';
+          if (this.score >= 60) return 'warning';
+          return 'bad';
+        },
+        scoreLabel() {
+          if (this.score >= 80) return 'Excellent - LLM Ready!';
+          if (this.score >= 60) return 'Good - Needs minor improvements';
+          if (this.score >= 40) return 'Fair - Needs work';
+          return 'Poor - Major improvements needed';
+        }
+      },
+      methods: {
+        calculateScore() {
+          let score = 0;
+          
+          // Has title (10 points)
+          if (this.content.title.length > 10) score += 10;
+          
+          // Has hook (10 points)
+          if (this.content.hook.length > 20) score += 10;
+          
+          // Word count (20 points)
+          if (this.wordCount >= 500) score += 20;
+          else if (this.wordCount >= 300) score += 10;
+          
+          // Low pronoun usage (15 points)
+          const pronounRatio = this.pronounCount / (this.wordCount || 1);
+          if (pronounRatio < 0.02) score += 15;
+          else if (pronounRatio < 0.05) score += 10;
+          
+          // Has numbers/data (15 points)
+          if (this.numberCount >= 5) score += 15;
+          else if (this.numberCount >= 3) score += 10;
+          else if (this.numberCount >= 1) score += 5;
+          
+          // Specific words (10 points)
+          const specific = /\b(costs?|price|percentage|requires?|provides?|includes?|measures?)\b/gi;
+          const specificCount = (this.content.body.match(specific) || []).length;
+          if (specificCount >= 5) score += 10;
+          else if (specificCount >= 3) score += 5;
+          
+          // Has extracted facts (20 points)
+          if (this.extractedFacts.length >= 10) score += 20;
+          else if (this.extractedFacts.length >= 5) score += 15;
+          else if (this.extractedFacts.length >= 3) score += 10;
+          
+          this.score = Math.min(100, score);
+          this.generateSuggestions();
+        },
+        generateSuggestions() {
+          this.suggestions = [];
+          
+          if (this.wordCount < 500) {
+            this.suggestions.push({
+              title: 'Add more content',
+              message: `Target at least 500 words. You have ${this.wordCount}.`
+            });
+          }
+          
+          if (this.pronounCount > this.wordCount * 0.05) {
+            this.suggestions.push({
+              title: 'Replace pronouns',
+              message: `Found ${this.pronounCount} pronouns (it/this/that). Replace them with specific entity names.`
+            });
+          }
+          
+          if (this.numberCount < 3) {
+            this.suggestions.push({
+              title: 'Add specific numbers',
+              message: 'Include concrete data: prices, percentages, quantities, dates.'
+            });
+          }
+          
+          if (this.extractedFacts.length < 5) {
+            this.suggestions.push({
+              title: 'Make stronger factual statements',
+              message: 'LLMs need clear facts to cite. Add more specific, verifiable statements.'
+            });
+          }
+          
+          if (!this.content.body.includes('?')) {
+            this.suggestions.push({
+              title: 'Consider adding questions',
+              message: 'Questions help structure content and improve AI understanding.'
+            });
+          }
+        },
+        async analyzeLLMReadiness() {
+          if (!this.content.body) {
+            this.showToast('Please write some content first');
+            return;
+          }
+          
+          this.analyzing = true;
+          
+          try {
+            // Simulate AI analysis (replace with actual API call)
+            await new Promise(resolve => setTimeout(resolve, 2000));
+            
+            // Extract facts from content
+            this.extractedFacts = this.extractFactsFromText(this.content.body);
+            
+            // Recalculate score
+            this.calculateScore();
+            this.hasAnalyzed = true;
+            
+            this.showToast(`✅ Analysis complete! Found ${this.extractedFacts.length} facts.`);
+            
+          } catch (error) {
+            console.error('Analysis error:', error);
+            this.showToast('❌ Analysis failed. Please try again.');
+          } finally {
+            this.analyzing = false;
+          }
+        },
+        extractFactsFromText(text) {
+          // Simple fact extraction (you can replace this with actual API call)
+          const facts = [];
+          const sentences = text.split(/[.!?]+/).filter(s => s.trim().length > 20);
+          
+          sentences.forEach(sentence => {
+            sentence = sentence.trim();
+            
+            // Look for patterns like "X is Y" or "X provides Y"
+            const patterns = [
+              /(.+?)\s+(is|are|was|were)\s+(.+)/i,
+              /(.+?)\s+(provides?|includes?|requires?|costs?|measures?)\s+(.+)/i,
+              /(.+?)\s+(enables?|helps?|supports?)\s+(.+)/i
+            ];
+            
+            for (const pattern of patterns) {
+              const match = sentence.match(pattern);
+              if (match && !match[1].match(/\b(it|this|that|these|those)\b/i)) {
+                facts.push({
+                  subject: match[1].trim(),
+                  predicate: match[2].trim(),
+                  object: match[3].trim()
+                });
+                break;
+              }
+            }
+          });
+          
+          return facts.slice(0, 15); // Limit to 15 facts
+        },
+        copyImprovedContent() {
+          if (!this.hasAnalyzed) return;
+          
+          // Build improved version with facts included
+          let improved = `# ${this.content.title}\n\n`;
+          if (this.content.hook) {
+            improved += `${this.content.hook}\n\n`;
+          }
+          improved += `${this.content.body}\n\n`;
+          
+          if (this.extractedFacts.length > 0) {
+            improved += `## Key Facts\n\n`;
+            this.extractedFacts.forEach(fact => {
+              improved += `- ${fact.subject} ${fact.predicate} ${fact.object}\n`;
+            });
+          }
+          
+          // Copy to clipboard
+          navigator.clipboard.writeText(improved).then(() => {
+            this.showToast('📋 Copied improved version to clipboard!');
+          }).catch(() => {
+            this.showToast('❌ Failed to copy. Please select and copy manually.');
+          });
+        },
+        showToast(message) {
+          this.toast.message = message;
+          this.toast.show = true;
+          setTimeout(() => {
+            this.toast.show = false;
+          }, 3000);
+        }
+      },
+      mounted() {
+        // Auto-calculate score on load
+        this.calculateScore();
+      }
+    }).mount('#app');
+  </script>
+</body>
+</html>
