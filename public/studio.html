@@ -204,6 +204,63 @@
           </div>
         </div>
 
+        <!-- CROUTONIZER PANEL (Real-Time Semantic Compiler) -->
+        <div class="bg-gradient-to-br from-[#00C2FF] to-[#0099CC] border-4 border-[#0A0A0A] p-6 shadow-[12px_12px_0px_0px_rgba(0,0,0,0.3)] mb-6">
+          <div class="flex items-center justify-between mb-4">
+            <h2 class="text-2xl font-bold text-[#0A0A0A]">CROUTONIZER SCORE</h2>
+            <div class="text-6xl font-bold text-[#0A0A0A]">
+              {{ croutonizerLiveScore }}<span class="text-3xl">/100</span>
+            </div>
+          </div>
+          
+          <div class="grid grid-cols-5 gap-3 mb-4">
+            <div class="bg-white border-2 border-[#0A0A0A] p-3 text-center">
+              <div :class="guardrails.sectionalAnchoring.pass ? 'text-[#10B981]' : 'text-[#EF4444]'" class="text-3xl font-bold mb-1">
+                {{ guardrails.sectionalAnchoring.pass ? '✓' : '✗' }}
+              </div>
+              <div class="text-xs font-bold">ANCHORING</div>
+            </div>
+            <div class="bg-white border-2 border-[#0A0A0A] p-3 text-center">
+              <div :class="guardrails.entityPersistence.pass ? 'text-[#10B981]' : 'text-[#EF4444]'" class="text-3xl font-bold mb-1">
+                {{ guardrails.entityPersistence.pass ? '✓' : '✗' }}
+              </div>
+              <div class="text-xs font-bold">ENTITIES</div>
+            </div>
+            <div class="bg-white border-2 border-[#0A0A0A] p-3 text-center">
+              <div :class="guardrails.claimEvidence.pass ? 'text-[#10B981]' : 'text-[#EF4444]'" class="text-3xl font-bold mb-1">
+                {{ guardrails.claimEvidence.pass ? '✓' : '✗' }}
+              </div>
+              <div class="text-xs font-bold">EVIDENCE</div>
+            </div>
+            <div class="bg-white border-2 border-[#0A0A0A] p-3 text-center">
+              <div :class="guardrails.queryHeaders.pass ? 'text-[#10B981]' : 'text-[#EF4444]'" class="text-3xl font-bold mb-1">
+                {{ guardrails.queryHeaders.pass ? '✓' : '✗' }}
+              </div>
+              <div class="text-xs font-bold">HEADERS</div>
+            </div>
+            <div class="bg-white border-2 border-[#0A0A0A] p-3 text-center">
+              <div :class="guardrails.factDensity.pass ? 'text-[#10B981]' : 'text-[#EF4444]'" class="text-3xl font-bold mb-1">
+                {{ guardrails.factDensity.pass ? '✓' : '✗' }}
+              </div>
+              <div class="text-xs font-bold">DENSITY</div>
+            </div>
+          </div>
+          
+          <div v-if="croutonizerWarnings.length > 0" class="space-y-2">
+            <div v-for="(warning, i) in croutonizerWarnings.slice(0, 3)" :key="i" 
+                 class="bg-white border-2 border-[#F59E0B] p-3 text-sm">
+              <div class="font-bold text-[#F59E0B] mb-1">{{ warning.type.toUpperCase() }}</div>
+              <div class="text-[#0A0A0A] mb-1">{{ warning.message }}</div>
+              <div v-if="warning.suggestion" class="text-[#0A0A0A] text-xs mt-2">
+                <strong>Fix:</strong> {{ warning.suggestion }}
+              </div>
+            </div>
+            <div v-if="croutonizerWarnings.length > 3" class="text-center text-sm text-[#0A0A0A]">
+              +{{ croutonizerWarnings.length - 3 }} more issues
+            </div>
+          </div>
+        </div>
+
         <!-- AEO/GEO Checklist -->
         <div class="bg-white border-2 border-[#0A0A0A] p-6 neo-card-sm">
           <div class="flex items-center justify-between mb-6">
@@ -570,7 +627,15 @@
             faq: []
           },
           artifacts: {},
-          complianceChecks: []
+          complianceChecks: [],
+          guardrails: {
+            sectionalAnchoring: { pass: true, score: 100, warnings: [] },
+            entityPersistence: { pass: true, score: 100, warnings: [] },
+            claimEvidence: { pass: true, score: 100, warnings: [] },
+            queryHeaders: { pass: true, score: 100, warnings: [] },
+            factDensity: { pass: true, score: 100, warnings: [] }
+          },
+          croutonizerWarnings: []
         };
       },
       computed: {
@@ -614,9 +679,179 @@
         },
         complianceScore() {
           return this.complianceChecks.filter(c => c.status === 'pass').length;
+        },
+        croutonizerLiveScore() {
+          const scores = Object.values(this.guardrails).map(g => g.score);
+          if (scores.length === 0) return 0;
+          const avg = scores.reduce((a, b) => a + b, 0) / scores.length;
+          return Math.round(avg);
         }
       },
+      watch: {
+        'simpleData.sections': {
+          handler() {
+            this.runCroutonizerChecks();
+          },
+          deep: true
+        },
+        'simpleData.keyFacts'() {
+          this.runCroutonizerChecks();
+        },
+        'simpleData.answerBox'() {
+          this.runCroutonizerChecks();
+        }
+      },
+      mounted() {
+        const saved = localStorage.getItem('studio_api_key');
+        if (saved) {
+          this.apiKey = saved;
+          this.loadPages();
+        }
+        this.runCroutonizerChecks();
+      },
       methods: {
+        // ===== CROUTONIZER LIVE GUARDRAILS =====
+        runCroutonizerChecks() {
+          this.croutonizerWarnings = [];
+          this.checkSectionalAnchoring();
+          this.checkEntityPersistence();
+          this.checkClaimEvidence();
+          this.checkQueryHeaders();
+          this.checkFactDensity();
+        },
+        checkSectionalAnchoring() {
+          let score = 100;
+          let warnings = [];
+          
+          this.simpleData.sections.forEach(section => {
+            if (!section.content) return;
+            const wordCount = section.content.split(/\s+/).length;
+            if (wordCount > 500) {
+              const hasSummary = /in short|to summarize|in summary|the key point|in essence/i.test(section.content);
+              if (!hasSummary) {
+                score -= 15;
+                warnings.push({
+                  type: 'Sectional Anchoring',
+                  message: `Section "${section.heading}" (${wordCount} words) needs summary`,
+                  suggestion: 'Add "In short: [key takeaway]" at end of section'
+                });
+              }
+            }
+          });
+          
+          this.guardrails.sectionalAnchoring = { pass: score >= 70, score: Math.max(0, score), warnings };
+          this.croutonizerWarnings.push(...warnings);
+        },
+        checkEntityPersistence() {
+          let score = 100;
+          let warnings = [];
+          const pronouns = /\b(it|this|that|they|them|these|those)\b/gi;
+          
+          this.simpleData.sections.forEach(section => {
+            if (!section.content) return;
+            const paragraphs = section.content.split('\n\n');
+            paragraphs.forEach((para, pIdx) => {
+              const matches = para.match(pronouns);
+              if (matches && para.split(/\s+/).length > 20) {
+                const hasEntity = /[A-Z][a-z]+\s+(verification|matching|system|protocol|entity|method)/i.test(para);
+                if (!hasEntity) {
+                  score -= 10;
+                  warnings.push({
+                    type: 'Entity Persistence',
+                    message: `Section "${section.heading}" para ${pIdx + 1} uses pronouns ambiguously`,
+                    suggestion: 'Replace "it" or "this" with specific entity name'
+                  });
+                }
+              }
+            });
+          });
+          
+          this.guardrails.entityPersistence = { pass: score >= 70, score: Math.max(0, score), warnings };
+          this.croutonizerWarnings.push(...warnings);
+        },
+        checkClaimEvidence() {
+          let score = 100;
+          let warnings = [];
+          
+          if (!this.simpleData.keyFacts) {
+            this.guardrails.claimEvidence = { pass: false, score: 0, warnings: [] };
+            return;
+          }
+          
+          const facts = this.simpleData.keyFacts.split('\n').filter(f => f.trim());
+          const sectionHeadings = this.simpleData.sections.map(s => s.heading.toLowerCase());
+          
+          let unmappedFacts = 0;
+          facts.forEach(fact => {
+            const factWords = fact.toLowerCase().split(/\s+/).slice(0, 3);
+            const mapped = sectionHeadings.some(heading => 
+              factWords.some(word => heading.includes(word))
+            );
+            if (!mapped) unmappedFacts++;
+          });
+          
+          if (unmappedFacts > facts.length * 0.3) {
+            score = 50;
+            warnings.push({
+              type: 'Claim-Evidence',
+              message: `${unmappedFacts} key facts don't map to section headings`,
+              suggestion: 'Create H2 sections supporting your key facts or add bridging sentences'
+            });
+          }
+          
+          this.guardrails.claimEvidence = { pass: score >= 70, score, warnings };
+          this.croutonizerWarnings.push(...warnings);
+        },
+        checkQueryHeaders() {
+          let score = 100;
+          let warnings = [];
+          const genericHeaders = ['introduction', 'overview', 'conclusion', 'summary', 'background', 'about', 'info', 'details'];
+          
+          this.simpleData.sections.forEach(section => {
+            if (!section.heading) return;
+            const heading = section.heading.toLowerCase();
+            const isGeneric = genericHeaders.some(g => heading === g || heading.includes(g));
+            
+            if (isGeneric) {
+              score -= 15;
+              warnings.push({
+                type: 'Query-Ready Headers',
+                message: `"${section.heading}" is too generic`,
+                suggestion: 'Make query-specific: e.g., "How Entity Verification Works" not "Overview"'
+              });
+            }
+          });
+          
+          this.guardrails.queryHeaders = { pass: score >= 70, score: Math.max(0, score), warnings };
+          this.croutonizerWarnings.push(...warnings);
+        },
+        checkFactDensity() {
+          let score = 100;
+          let warnings = [];
+          
+          this.simpleData.sections.forEach(section => {
+            if (!section.content) return;
+            const paragraphs = section.content.split('\n\n').filter(p => p.trim());
+            if (paragraphs.length < 2) return;
+            
+            const factIndicators = /\d+%|\d+ percent|reduces|increases|requires|defines|causes|results in|compared to/i;
+            const factyParagraphs = paragraphs.filter(p => factIndicators.test(p));
+            const density = factyParagraphs.length / paragraphs.length;
+            
+            if (density < 0.3) {
+              score -= 20;
+              warnings.push({
+                type: 'Fact Density',
+                message: `"${section.heading}" low density (${Math.round(density * 100)}%)`,
+                suggestion: 'Add numbers, comparisons, definitions. Cut fluff.'
+              });
+            }
+          });
+          
+          this.guardrails.factDensity = { pass: score >= 70, score: Math.max(0, score), warnings };
+          this.croutonizerWarnings.push(...warnings);
+        },
+        // ===== EXISTING METHODS =====
         getScoreStatus(score) {
           if (score >= 80) return 'EXCELLENT - Ready for AI Citations';
           if (score >= 65) return 'GOOD - Minor improvements needed';
@@ -1481,6 +1716,194 @@
             alert('Error loading compliance: ' + err.message);
           }
         },
+        // ===== COPY FOR CMS (Phase 1) =====
+        async copyForCMS() {
+          let html = '<article>\n';
+          let plainText = '';
+          
+          html += `<h1>${this.simpleData.title}</h1>\n`;
+          plainText += `${this.simpleData.title}\n\n`;
+          
+          if (this.simpleData.thesis) {
+            html += `<p><strong>${this.simpleData.thesis}</strong></p>\n`;
+            plainText += `${this.simpleData.thesis}\n\n`;
+          }
+          
+          if (this.simpleData.answerBox) {
+            html += `<h2>Summary</h2>\n<p>${this.simpleData.answerBox}</p>\n`;
+            plainText += `Summary\n\n${this.simpleData.answerBox}\n\n`;
+          }
+          
+          this.simpleData.sections.forEach(section => {
+            if (section.heading && section.content) {
+              html += `<h2>${section.heading}</h2>\n`;
+              plainText += `${section.heading}\n\n`;
+              
+              const paragraphs = section.content.split('\n\n').filter(p => p.trim());
+              paragraphs.forEach(p => {
+                html += `<p>${p.trim()}</p>\n`;
+                plainText += `${p.trim()}\n\n`;
+              });
+            }
+          });
+          
+          if (this.simpleData.structuredAsset) {
+            const isTable = this.simpleData.structuredAsset.includes('|') || this.simpleData.structuredAsset.includes('\t');
+            if (isTable) {
+              html += this.convertToHTMLTable(this.simpleData.structuredAsset);
+            } else {
+              html += `<h2>Reference</h2>\n<pre>${this.simpleData.structuredAsset}</pre>\n`;
+            }
+            plainText += `\n${this.simpleData.structuredAsset}\n\n`;
+          }
+          
+          if (this.simpleData.implications || this.simpleData.nextActions) {
+            html += `<h2>What This Means</h2>\n`;
+            plainText += `What This Means\n\n`;
+            
+            if (this.simpleData.implications) {
+              html += `<h3>Implications</h3>\n<ul>\n`;
+              const implications = this.simpleData.implications.split('\n').filter(l => l.trim());
+              implications.forEach(imp => {
+                const clean = imp.replace(/^[•\-\*]\s*/, '');
+                if (clean) html += `<li>${clean}</li>\n`;
+              });
+              html += `</ul>\n`;
+            }
+            
+            if (this.simpleData.nextActions) {
+              html += `<h3>Next Actions</h3>\n<ul>\n`;
+              const actions = this.simpleData.nextActions.split('\n').filter(l => l.trim());
+              actions.forEach(action => {
+                const clean = action.replace(/^[•\-\*]\s*/, '');
+                if (clean) html += `<li>${clean}</li>\n`;
+              });
+              html += `</ul>\n`;
+            }
+          }
+          
+          if (this.simpleData.faq && this.simpleData.faq.some(qa => qa.question)) {
+            html += `<h2>Frequently Asked Questions</h2>\n`;
+            plainText += `Frequently Asked Questions\n\n`;
+            this.simpleData.faq.forEach(qa => {
+              if (qa.question && qa.answer) {
+                html += `<h3>${qa.question}</h3>\n<p>${qa.answer}</p>\n`;
+                plainText += `${qa.question}\n\n${qa.answer}\n\n`;
+              }
+            });
+          }
+          
+          const payload = {
+            hash: this.currentPage.content_hash || 'pending',
+            score: this.croutonizerLiveScore,
+            artifacts: {
+              markdown_url: `https://graph.croutons.ai/v1/artifacts/${this.currentPage.id}/markdown`,
+              ndjson_url: `https://graph.croutons.ai/v1/artifacts/${this.currentPage.id}/ndjson`,
+              jsonld_url: `https://graph.croutons.ai/v1/artifacts/${this.currentPage.id}/jsonld`
+            }
+          };
+          
+          html += `<div hidden data-croutons-payload='${JSON.stringify(payload)}'></div>\n`;
+          html += `</article>`;
+          
+          try {
+            const htmlBlob = new Blob([html], { type: 'text/html' });
+            const textBlob = new Blob([plainText], { type: 'text/plain' });
+            
+            await navigator.clipboard.write([
+              new ClipboardItem({
+                'text/html': htmlBlob,
+                'text/plain': textBlob
+              })
+            ]);
+            
+            alert(`COPIED FOR CMS!\n\nPaste into WordPress, Shopify, Webflow, or any CMS.\n\nFormatting will be perfect - headings, lists, tables, everything.`);
+          } catch (err) {
+            console.error('Copy failed:', err);
+            await navigator.clipboard.writeText(html);
+            alert(`Copied! (HTML format - paste into CMS visual editor)`);
+          }
+        },
+        convertToHTMLTable(text) {
+          const lines = text.trim().split('\n').filter(l => l.trim());
+          if (lines.length < 2) return `<pre>${text}</pre>\n`;
+          
+          let html = '<table>\n<thead>\n<tr>';
+          const headers = lines[0].split(/\||	/).map(h => h.trim()).filter(h => h);
+          headers.forEach(header => { html += `<th>${header}</th>`; });
+          html += '</tr>\n</thead>\n<tbody>\n';
+          
+          const dataRows = lines.slice(1).filter(l => !l.match(/^[\|\-\s]+$/));
+          dataRows.forEach(row => {
+            const cells = row.split(/\||	/).map(c => c.trim()).filter(c => c);
+            html += '<tr>';
+            cells.forEach(cell => { html += `<td>${cell}</td>`; });
+            html += '</tr>\n';
+          });
+          
+          html += '</tbody>\n</table>\n';
+          return html;
+        },
+        copyTablesTSV() {
+          if (!this.simpleData.structuredAsset) return;
+          
+          const lines = this.simpleData.structuredAsset.trim().split('\n');
+          const tsv = lines.map(line => {
+            return line.split(/\||	/).map(c => c.trim()).filter(c => c && c !== '-').join('\t');
+          }).filter(l => l).join('\n');
+          
+          navigator.clipboard.writeText(tsv).then(() => {
+            alert(`TABLES COPIED AS TSV!\n\nPaste into Excel, Google Sheets, or CMS.\nColumns separated by tabs.`);
+          });
+        },
+        copyConnectorScript() {
+          const script = `<!-- Croutons Universal Connector - Add once to site <head> -->
+<script>
+(function() {
+  const payload = document.querySelector('[data-croutons-payload]');
+  if (!payload) return;
+  
+  try {
+    const data = JSON.parse(payload.getAttribute('data-croutons-payload'));
+    
+    fetch(data.artifacts.jsonld_url)
+      .then(r => r.json())
+      .then(jsonld => {
+        const script = document.createElement('script');
+        script.type = 'application/ld+json';
+        script.textContent = JSON.stringify(jsonld);
+        document.head.appendChild(script);
+      });
+    
+    const link = document.createElement('link');
+    link.rel = 'alternate';
+    link.type = 'text/markdown';
+    link.href = data.artifacts.markdown_url;
+    document.head.appendChild(link);
+    
+    const hashMeta = document.createElement('meta');
+    hashMeta.name = 'croutons-hash';
+    hashMeta.content = data.hash;
+    document.head.appendChild(hashMeta);
+    
+    const scoreMeta = document.createElement('meta');
+    scoreMeta.name = 'croutons-score';
+    scoreMeta.content = data.score;
+    document.head.appendChild(scoreMeta);
+    
+    console.log('[Croutons] LLM-ready layers injected. Score:', data.score);
+  } catch (err) {
+    console.error('[Croutons] Failed to inject layers:', err);
+  }
+})();
+<\/script>`;
+          
+          navigator.clipboard.writeText(script).then(() => {
+            alert(`CONNECTOR SCRIPT COPIED!\n\nAdd this ONCE to your site <head>.\n\nIt auto-injects LLM-ready layers for all pasted Croutons articles.`);
+          });
+        },
+        // ===== END COPY METHODS =====
+        
         downloadArtifact(key) {
           const content = this.artifacts[key];
           const filename = `${this.currentPage.path.split('/').pop()}.${key === 'markdown' ? 'md' : key === 'ndjson' ? 'ndjson' : key === 'json_ld' ? 'json' : 'html'}`;
@@ -1491,13 +1914,6 @@
           a.download = filename;
           a.click();
           URL.revokeObjectURL(url);
-        }
-      },
-      mounted() {
-        const saved = localStorage.getItem('studio_api_key');
-        if (saved) {
-          this.apiKey = saved;
-          this.loadPages();
         }
       }
     }).mount('#app');
