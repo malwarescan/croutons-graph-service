@@ -160,7 +160,7 @@
         <div class="bg-gradient-to-br from-[#00C2FF] to-[#0099CC] border-4 border-[#0A0A0A] p-8 shadow-[12px_12px_0px_0px_rgba(10,10,10,0.2)]">
           <div class="flex items-start justify-between mb-4">
             <div>
-              <h2 class="text-2xl font-bold text-[#0A0A0A] mb-2">🪄 AI Content Generator</h2>
+              <h2 class="text-2xl font-bold text-[#0A0A0A] mb-2">AI CONTENT GENERATOR</h2>
               <p class="text-sm text-[#0A0A0A] opacity-80">
                 Let AI write your entire page. Just describe what you want, select from suggestions, done.
               </p>
@@ -198,18 +198,18 @@
               <button @click="generateContentAI" 
                       :disabled="generating || !aiPrompt.topic"
                       class="w-full px-8 py-4 bg-[#0A0A0A] text-white font-bold uppercase tracking-wide disabled:opacity-50 disabled:cursor-not-allowed btn-secondary">
-                {{ generating ? '🔮 GENERATING CONTENT...' : '✨ GENERATE FULL PAGE' }}
+                {{ generating ? 'GENERATING CONTENT...' : 'GENERATE FULL PAGE' }}
               </button>
             </div>
             
             <!-- AI Generated Preview -->
             <div v-if="aiGenerated.title" class="bg-white border-2 border-[#10B981] p-6">
               <div class="flex items-center justify-between mb-4">
-                <h3 class="text-xl font-bold text-[#10B981]">✅ Generated Content Preview</h3>
+                <h3 class="text-xl font-bold text-[#10B981]">GENERATED CONTENT PREVIEW</h3>
                 <div class="flex gap-2">
                   <button @click="applyAIContent" 
                           class="px-6 py-2 bg-[#10B981] text-white font-bold uppercase text-sm btn-primary">
-                    ✓ USE THIS
+                    USE THIS
                   </button>
                   <button @click="aiGenerated = {}" 
                           class="px-6 py-2 bg-[#E5E5E5] text-[#0A0A0A] font-medium text-sm border-2 border-[#0A0A0A]">
@@ -327,7 +327,7 @@
                 </div>
                 <div class="text-xs text-gray-600 mb-2">{{ issue.explanation }}</div>
                 <div v-if="issue.fix" class="text-xs text-blue-600 mt-2">
-                  💡 {{ issue.fix.suggestion || issue.fix.instructions }}
+                  FIX: {{ issue.fix.suggestion || issue.fix.instructions }}
                 </div>
               </div>
               <div class="ml-4 text-sm font-bold text-green-600">
@@ -407,7 +407,7 @@
                 {{ extracting ? 'EXTRACTING...' : 'EXTRACT FACTS' }}
               </button>
               <span v-if="extractedFactsCount > 0" class="text-xs text-[#25D366] self-center">
-                ✓ {{ extractedFactsCount }} facts extracted
+                {{ extractedFactsCount }} facts extracted
               </span>
             </div>
             
@@ -944,7 +944,7 @@
               body: JSON.stringify({ facts })
             });
 
-            alert('✓ Page saved successfully!');
+            alert('Page saved successfully!');
             this.loadPages();
           } catch (err) {
             console.error('Save error:', err);
@@ -1026,7 +1026,7 @@
           
           // Close AI wizard and scroll to form
           this.showAIWizard = false;
-          alert('✅ Content applied! Review and edit as needed, then click "SAVE CONTENT".');
+          alert('Content applied! Review and edit as needed, then click "SAVE CONTENT".');
           
           setTimeout(() => {
             window.scrollTo({ top: 400, behavior: 'smooth' });
@@ -1075,7 +1075,7 @@
               }
               
               this.extractedFactsCount = data.facts.length;
-              alert(`✓ Extracted ${data.facts.length} atomic facts from your narrative!\n\nReview and edit them as needed.`);
+              alert(`Extracted ${data.facts.length} atomic facts from your narrative.\n\nReview and edit them as needed.`);
             } else {
               alert('No facts were extracted. Try adding more detailed narrative content.');
             }
