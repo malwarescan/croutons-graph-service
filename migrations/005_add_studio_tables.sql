@@ -22,6 +22,7 @@ CREATE TABLE IF NOT EXISTS studio_sections (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   page_id UUID NOT NULL REFERENCES studio_pages(id) ON DELETE CASCADE,
   section_key VARCHAR(100) NOT NULL,
+  heading TEXT,
   order_index INTEGER NOT NULL,
   narrative_md TEXT,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),

@@ -110,14 +110,20 @@ async function createPage(req, res) {
       const page = pageResult.rows[0];
       
       // Auto-generate sections from template
+      // First, add heading column if it doesn't exist
+      await client.query(`
+        ALTER TABLE studio_sections 
+        ADD COLUMN IF NOT EXISTS heading TEXT
+      `).catch(() => {}); // Ignore if column already exists
+      
       const sections = [];
       for (let i = 0; i < template.required_sections.length; i++) {
         const sectionDef = template.required_sections[i];
         const sectionResult = await client.query(
-          `INSERT INTO studio_sections (page_id, section_key, order_index, narrative_md)
-           VALUES ($1, $2, $3, $4)
+          `INSERT INTO studio_sections (page_id, section_key, heading, order_index, narrative_md)
+           VALUES ($1, $2, $3, $4, $5)
            RETURNING *`,
-          [page.id, sectionDef.key, i, '']
+          [page.id, sectionDef.key, sectionDef.heading, i, '']
         );
         sections.push(sectionResult.rows[0]);
       }
