@@ -4,14 +4,16 @@
 
 const { checkSectionAnchoring } = require('../rules/sectionAnchoring');
 const { checkEntityPersistence } = require('../rules/entityPersistence');
+const { checkClaimEvidence } = require('../rules/claimEvidence');
 const { extractEntities } = require('./parser');
 
 /**
  * Run all linter rules on document
  * @param {Object} ast - Document AST
+ * @param {Array} keyFacts - Key facts array (optional)
  * @returns {Promise<Array>} Array of issues
  */
-async function runLinter(ast) {
+async function runLinter(ast, keyFacts = []) {
   const issues = [];
   
   // Extract document-level entities
@@ -36,7 +38,11 @@ async function runLinter(ast) {
     });
   });
   
-  // TODO: Add Rules C, D, E when implemented
+  // Run Rule C: Claim-Evidence Mapping
+  const claimIssues = checkClaimEvidence(ast, keyFacts);
+  issues.push(...claimIssues);
+  
+  // TODO: Add Rules D, E when implemented
   
   return issues;
 }

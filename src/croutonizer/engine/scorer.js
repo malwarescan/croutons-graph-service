@@ -4,19 +4,21 @@
 
 const { calculateSectionAnchoringScore } = require('../rules/sectionAnchoring');
 const { calculateEntityPersistenceScore } = require('../rules/entityPersistence');
+const { calculateClaimEvidenceScore } = require('../rules/claimEvidence');
 const { determineStatus, getBlockingIssues } = require('./linter');
 
 /**
  * Calculate Croutonizer Score (0-100)
  * @param {Object} ast - Document AST
  * @param {Array} issues - Issues from linter
+ * @param {Array} keyFacts - Key facts (optional)
  * @returns {Object} Score with breakdown
  */
-function calculateScore(ast, issues) {
+function calculateScore(ast, issues, keyFacts = []) {
   const breakdown = {
     sectionAnchoring: calculateSectionAnchoringScore(ast.sections, issues),
     entityPersistence: calculateEntityPersistenceScore(ast.sections, issues),
-    claimEvidence: calculateClaimEvidenceScore(ast, issues),
+    claimEvidence: calculateClaimEvidenceScore(ast, keyFacts, issues),
     headerSpecificity: calculateHeaderScore(ast.sections, issues),
     factDensity: calculateDensityScore(ast, issues),
     factQuality: calculateQualityScore(ast, issues)
@@ -37,29 +39,7 @@ function calculateScore(ast, issues) {
   };
 }
 
-/**
- * Calculate Claim-Evidence score (Rule C)
- * Placeholder until Rule C is implemented
- */
-function calculateClaimEvidenceScore(ast, issues) {
-  // TODO: Implement when Rule C is ready
-  const claimIssues = issues.filter(i => i.rule === 'claimEvidence');
-  
-  if (claimIssues.length === 0) {
-    return { score: 20, max: 20, issues: 0 };
-  }
-  
-  const errorCount = claimIssues.filter(i => i.type === 'error').length;
-  const warningCount = claimIssues.filter(i => i.type === 'warning').length;
-  
-  const score = Math.max(0, 20 - (errorCount * 5) - (warningCount * 2));
-  
-  return {
-    score,
-    max: 20,
-    issues: claimIssues.length
-  };
-}
+// Claim-Evidence scoring is now imported from claimEvidence.js rule
 
 /**
  * Calculate Header Specificity score (Rule D)

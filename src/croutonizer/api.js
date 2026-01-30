@@ -21,14 +21,40 @@ async function croutonizePage(req, res) {
       keyFacts: req.body.keyFacts || ''
     };
     
+    // Parse Key Facts (can be string or array)
+    let keyFacts = [];
+    if (content.keyFacts) {
+      if (typeof content.keyFacts === 'string') {
+        // Parse string format "Subject | Predicate | Object" per line
+        keyFacts = content.keyFacts
+          .split('\n')
+          .map(line => line.trim())
+          .filter(line => line.length > 0 && line.includes('|'))
+          .map((line, idx) => {
+            const parts = line.split('|').map(p => p.trim());
+            return {
+              id: `fact-${idx}`,
+              subject: parts[0] || '',
+              predicate: parts[1] || '',
+              object: parts[2] || ''
+            };
+          });
+      } else if (Array.isArray(content.keyFacts)) {
+        keyFacts = content.keyFacts;
+      }
+    }
+    
     // Parse document into AST
     const ast = parseDocument(content);
     
-    // Run linter
-    const issues = await runLinter(ast);
+    // Store facts in AST
+    ast.facts = keyFacts;
     
-    // Calculate score
-    const score = calculateScore(ast, issues);
+    // Run linter with key facts
+    const issues = await runLinter(ast, keyFacts);
+    
+    // Calculate score with key facts
+    const score = calculateScore(ast, issues, keyFacts);
     
     // Return results
     res.json({
