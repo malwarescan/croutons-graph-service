@@ -204,76 +204,6 @@
           </div>
         </div>
 
-        <!-- CROUTONIZER SCORE -->
-        <div class="bg-white border-2 border-[#0A0A0A] p-8 shadow-[8px_8px_0px_0px_rgba(10,10,10,0.1)] mb-6">
-          <div class="text-center mb-6">
-            <div class="text-sm font-bold uppercase tracking-wider text-[#6B6B6B] mb-2">
-              {{ croutonizerScore.total ? 'CROUTONIZER SCORE' : 'LLM READINESS SCORE' }}
-            </div>
-            <div class="text-6xl font-bold text-[#0A0A0A] mb-2">
-              {{ croutonizerScore.total || Math.round((checklistScore / 12) * 100) }}%
-            </div>
-            <div class="text-sm font-medium text-[#0A0A0A]">
-              {{ getScoreStatus(croutonizerScore.total || Math.round((checklistScore / 12) * 100)) }}
-            </div>
-            <div v-if="croutonizerScore.status" class="mt-3 text-xs text-[#6B6B6B]">
-              STATUS: {{ croutonizerScore.status.toUpperCase() }}
-              <span v-if="croutonizerScore.blocking_issues > 0" class="ml-2 text-[#EF4444] font-bold">
-                {{ croutonizerScore.blocking_issues }} BLOCKING
-              </span>
-            </div>
-          </div>
-          
-          <div class="grid grid-cols-3 gap-4 mb-6 pb-6 border-b-2 border-[#E5E5E5]">
-            <div class="text-center">
-              <div class="text-2xl font-bold text-[#0A0A0A]">{{ keyFactsCount }}</div>
-              <div class="text-xs text-[#6B6B6B] uppercase tracking-wide">Facts</div>
-            </div>
-            <div class="text-center">
-              <div class="text-2xl font-bold text-[#0A0A0A]">{{ answerBoxWordCount }}</div>
-              <div class="text-xs text-[#6B6B6B] uppercase tracking-wide">Words</div>
-            </div>
-            <div class="text-center">
-              <div class="text-2xl font-bold text-[#0A0A0A]">{{ simpleData.sections.length }}</div>
-              <div class="text-xs text-[#6B6B6B] uppercase tracking-wide">Sections</div>
-            </div>
-          </div>
-          
-          <button @click="runCroutonizer" 
-                  :disabled="croutonizing"
-                  class="w-full px-6 py-3 bg-[#0A0A0A] text-white font-medium uppercase tracking-wide disabled:opacity-50 btn-secondary">
-            {{ croutonizing ? 'ANALYZING...' : 'RUN SEMANTIC COMPILER' }}
-          </button>
-        </div>
-
-        <!-- CROUTONIZER ISSUES -->
-        <div v-if="croutonizerIssues.length > 0" class="bg-white border-2 border-[#EF4444] p-6 mb-6 shadow-[4px_4px_0px_0px_rgba(239,68,68,0.2)]">
-          <h3 class="text-xl font-bold text-[#0A0A0A] mb-4">
-            {{ croutonizerIssues.length }} ISSUES FOUND
-          </h3>
-          <div v-for="issue in croutonizerIssues.slice(0, 5)" :key="issue.id" 
-               class="mb-4 p-4 border-l-4 bg-gray-50"
-               :class="issue.type === 'error' ? 'border-red-600' : 'border-yellow-500'">
-            <div class="flex items-start justify-between">
-              <div class="flex-1">
-                <div class="font-bold text-sm mb-1">
-                  <span :class="issue.type === 'error' ? 'text-[#EF4444]' : 'text-[#F59E0B]'">[{{ issue.type.toUpperCase() }}]</span> {{ issue.message }}
-                </div>
-                <div class="text-xs text-gray-600 mb-2">{{ issue.explanation }}</div>
-                <div v-if="issue.fix" class="text-xs text-blue-600 mt-2">
-                  FIX: {{ issue.fix.suggestion || issue.fix.instructions }}
-                </div>
-              </div>
-              <div class="ml-4 text-sm font-bold text-green-600">
-                +{{ Math.abs(issue.score_impact) }} pts
-              </div>
-            </div>
-          </div>
-          <div v-if="croutonizerIssues.length > 5" class="text-sm text-gray-600 text-center mt-4">
-            ...and {{ croutonizerIssues.length - 5 }} more issues
-          </div>
-        </div>
-
         <!-- AEO/GEO Checklist -->
         <div class="bg-white border-2 border-[#0A0A0A] p-6 neo-card-sm">
           <div class="flex items-center justify-between mb-6">
@@ -920,18 +850,29 @@
             
             const generated = data.content;
             
-            // Apply directly to form (no preview step)
-            this.simpleData.title = generated.title || '';
-            this.simpleData.thesis = generated.thesis || '';
-            this.simpleData.answerBox = generated.answerBox || '';
-            this.simpleData.keyFacts = generated.keyFacts || '';
-            this.simpleData.sections = generated.sections ? [...generated.sections] : [];
-            this.simpleData.structuredAsset = generated.structuredAsset || '';
-            this.simpleData.implications = generated.implications || '';
-            this.simpleData.nextActions = generated.nextActions || '';
-            this.simpleData.first30Min = generated.first30Min || '';
-            this.simpleData.relatedResources = generated.relatedResources || '';
-            this.simpleData.faq = generated.faq ? [...generated.faq] : [];
+            console.log('[generateAndApply] Generated content:', {
+              title: generated.title,
+              thesis: generated.thesis,
+              answerBox: generated.answerBox?.substring(0, 50),
+              keyFactsLines: generated.keyFacts?.split('\n').length,
+              sectionsCount: generated.sections?.length,
+              faqCount: generated.faq?.length
+            });
+            
+            // Apply directly to form with forced reactivity
+            this.simpleData = {
+              title: generated.title || '',
+              thesis: generated.thesis || '',
+              answerBox: generated.answerBox || '',
+              keyFacts: generated.keyFacts || '',
+              sections: generated.sections ? JSON.parse(JSON.stringify(generated.sections)) : [],
+              structuredAsset: generated.structuredAsset || '',
+              implications: generated.implications || '',
+              nextActions: generated.nextActions || '',
+              first30Min: generated.first30Min || '',
+              relatedResources: generated.relatedResources || '',
+              faq: generated.faq ? JSON.parse(JSON.stringify(generated.faq)) : []
+            };
             
             // Update page type
             this.currentPage.page_type = this.aiPrompt.contentType || 'blog';
@@ -945,9 +886,13 @@
               this.currentPage.path = `/blog/${slug}`;
             }
             
-            console.log('[generateAndApply] Form populated');
+            console.log('[generateAndApply] simpleData after update:', {
+              title: this.simpleData.title,
+              sectionsCount: this.simpleData.sections.length,
+              faqCount: this.simpleData.faq.length
+            });
             
-            alert('Content generated and form filled. Review and edit as needed, then save.');
+            alert(`Content generated!\n\nTitle: ${this.simpleData.title}\n${this.simpleData.sections.length} sections\n${this.simpleData.faq.length} FAQs\n\nScroll down to review.`);
             
             // Scroll to show the filled form
             setTimeout(() => {
