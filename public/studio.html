@@ -405,16 +405,23 @@
 
         <!-- Actions -->
         <div class="space-y-4">
-          <!-- COPY ARTICLE BUTTONS (BIG) -->
-          <div v-if="simpleData.title && simpleData.answerBox" class="flex gap-4">
-            <button @click="copyArticle('html')" 
-                    class="flex-1 px-8 py-6 bg-[#10B981] text-white font-bold uppercase tracking-wide text-lg border-4 border-[#0A0A0A] shadow-[8px_8px_0px_0px_rgba(0,0,0,0.3)] hover:shadow-[12px_12px_0px_0px_rgba(0,0,0,0.4)] transition-all">
-              COPY AS HTML (WordPress/CMS)
+          <!-- COPY FOR CMS (PRIMARY ACTION) -->
+          <div v-if="simpleData.title && simpleData.answerBox" class="space-y-3">
+            <button @click="copyForCMS" 
+                    class="w-full px-8 py-6 bg-[#10B981] text-white font-bold uppercase tracking-wide text-xl border-4 border-[#0A0A0A] shadow-[12px_12px_0px_0px_rgba(0,0,0,0.4)] hover:shadow-[16px_16px_0px_0px_rgba(0,0,0,0.5)] transition-all">
+              COPY FOR CMS
             </button>
-            <button @click="copyArticle('markdown')" 
-                    class="flex-1 px-8 py-6 bg-[#00C2FF] text-[#0A0A0A] font-bold uppercase tracking-wide text-lg border-4 border-[#0A0A0A] shadow-[8px_8px_0px_0px_rgba(0,0,0,0.3)] hover:shadow-[12px_12px_0px_0px_rgba(0,0,0,0.4)] transition-all">
-              COPY AS MARKDOWN
-            </button>
+            <div class="flex gap-3">
+              <button @click="copyTablesTSV" 
+                      v-if="simpleData.structuredAsset"
+                      class="flex-1 px-4 py-3 bg-white text-[#0A0A0A] border-2 border-[#0A0A0A] font-medium uppercase text-sm btn-secondary">
+                COPY TABLES (TSV)
+              </button>
+              <button @click="copyConnectorScript" 
+                      class="flex-1 px-4 py-3 bg-[#00C2FF] text-[#0A0A0A] border-2 border-[#00C2FF] font-medium uppercase text-sm btn-primary">
+                GET CONNECTOR SCRIPT
+              </button>
+            </div>
           </div>
           
           <div class="flex gap-4">
@@ -866,6 +873,234 @@
             alert('Error saving page: ' + err.message);
           }
           this.saving = false;
+        },
+        async copyForCMS() {
+          // Generate clean HTML for CMS paste (NO code visible to writer)
+          let html = '';
+          let plainText = '';
+          
+          // Build semantic HTML
+          html += `<article>\n`;
+          html += `<h1>${this.simpleData.title}</h1>\n`;
+          plainText += `${this.simpleData.title}\n\n`;
+          
+          if (this.simpleData.thesis) {
+            html += `<p><strong>${this.simpleData.thesis}</strong></p>\n`;
+            plainText += `${this.simpleData.thesis}\n\n`;
+          }
+          
+          // Answer Box (REQUIRED near top)
+          if (this.simpleData.answerBox) {
+            html += `<h2>Summary</h2>\n<p>${this.simpleData.answerBox}</p>\n`;
+            plainText += `Summary\n\n${this.simpleData.answerBox}\n\n`;
+          }
+          
+          // Main Sections
+          this.simpleData.sections.forEach(section => {
+            if (section.heading && section.content) {
+              html += `<h2>${section.heading}</h2>\n`;
+              plainText += `${section.heading}\n\n`;
+              
+              const paragraphs = section.content.split('\n\n').filter(p => p.trim());
+              paragraphs.forEach(p => {
+                html += `<p>${p.trim()}</p>\n`;
+                plainText += `${p.trim()}\n\n`;
+              });
+            }
+          });
+          
+          // Structured Asset (as real table if possible)
+          if (this.simpleData.structuredAsset) {
+            const isTable = this.simpleData.structuredAsset.includes('|') || 
+                           this.simpleData.structuredAsset.includes('\t');
+            
+            if (isTable) {
+              html += this.convertToHTMLTable(this.simpleData.structuredAsset);
+              plainText += `\n${this.simpleData.structuredAsset}\n\n`;
+            } else {
+              html += `<h2>Reference</h2>\n<pre>${this.simpleData.structuredAsset}</pre>\n`;
+              plainText += `Reference\n\n${this.simpleData.structuredAsset}\n\n`;
+            }
+          }
+          
+          // What This Means
+          if (this.simpleData.implications || this.simpleData.nextActions) {
+            html += `<h2>What This Means</h2>\n`;
+            plainText += `What This Means\n\n`;
+            
+            if (this.simpleData.implications) {
+              html += `<h3>Implications</h3>\n<ul>\n`;
+              plainText += `Implications\n\n`;
+              const implications = this.simpleData.implications.split('\n').filter(l => l.trim());
+              implications.forEach(imp => {
+                const clean = imp.replace(/^[•\-\*]\s*/, '');
+                if (clean) {
+                  html += `<li>${clean}</li>\n`;
+                  plainText += `- ${clean}\n`;
+                }
+              });
+              html += `</ul>\n`;
+              plainText += `\n`;
+            }
+            
+            if (this.simpleData.nextActions) {
+              html += `<h3>Next Actions</h3>\n<ul>\n`;
+              plainText += `Next Actions\n\n`;
+              const actions = this.simpleData.nextActions.split('\n').filter(l => l.trim());
+              actions.forEach(action => {
+                const clean = action.replace(/^[•\-\*]\s*/, '');
+                if (clean) {
+                  html += `<li>${clean}</li>\n`;
+                  plainText += `- ${clean}\n`;
+                }
+              });
+              html += `</ul>\n`;
+              plainText += `\n`;
+            }
+            
+            if (this.simpleData.first30Min) {
+              html += `<p><strong>Start here:</strong> ${this.simpleData.first30Min}</p>\n`;
+              plainText += `Start here: ${this.simpleData.first30Min}\n\n`;
+            }
+          }
+          
+          // FAQ
+          if (this.simpleData.faq && this.simpleData.faq.some(qa => qa.question)) {
+            html += `<h2>Frequently Asked Questions</h2>\n`;
+            plainText += `Frequently Asked Questions\n\n`;
+            this.simpleData.faq.forEach(qa => {
+              if (qa.question && qa.answer) {
+                html += `<h3>${qa.question}</h3>\n<p>${qa.answer}</p>\n`;
+                plainText += `${qa.question}\n\n${qa.answer}\n\n`;
+              }
+            });
+          }
+          
+          // Hidden payload (survives CMS paste)
+          const payload = {
+            hash: this.currentPage.content_hash || 'pending',
+            score: Math.round((this.checklistScore / 12) * 100),
+            artifacts: {
+              markdown_url: `https://graph.croutons.ai/v1/artifacts/${this.currentPage.id}/markdown`,
+              ndjson_url: `https://graph.croutons.ai/v1/artifacts/${this.currentPage.id}/ndjson`,
+              jsonld_url: `https://graph.croutons.ai/v1/artifacts/${this.currentPage.id}/jsonld`
+            }
+          };
+          
+          html += `<div hidden data-croutons-payload='${JSON.stringify(payload)}'></div>\n`;
+          html += `</article>`;
+          
+          // Multi-format clipboard write
+          try {
+            const htmlBlob = new Blob([html], { type: 'text/html' });
+            const textBlob = new Blob([plainText], { type: 'text/plain' });
+            
+            await navigator.clipboard.write([
+              new ClipboardItem({
+                'text/html': htmlBlob,
+                'text/plain': textBlob
+              })
+            ]);
+            
+            alert(`✓ COPIED FOR CMS!\n\nPaste into WordPress, Shopify, Webflow, Medium, or any CMS.\n\nThe article will paste with perfect formatting - headings, lists, tables, everything.`);
+          } catch (err) {
+            console.error('Multi-format copy failed:', err);
+            // Fallback to simple text copy
+            await navigator.clipboard.writeText(html);
+            alert(`Copied! (Note: Your browser doesn't support rich paste. HTML copied as text.)`);
+          }
+        },
+        convertToHTMLTable(text) {
+          // Convert markdown or TSV table to proper HTML table
+          const lines = text.trim().split('\n').filter(l => l.trim());
+          if (lines.length < 2) return `<pre>${text}</pre>\n`;
+          
+          let html = '<table>\n<thead>\n<tr>';
+          
+          // Header row
+          const headers = lines[0].split(/\||	/).map(h => h.trim()).filter(h => h);
+          headers.forEach(header => {
+            html += `<th>${header}</th>`;
+          });
+          html += '</tr>\n</thead>\n<tbody>\n';
+          
+          // Data rows (skip separator row if markdown)
+          const dataRows = lines.slice(1).filter(l => !l.match(/^[\|\-\s]+$/));
+          dataRows.forEach(row => {
+            const cells = row.split(/\||	/).map(c => c.trim()).filter(c => c);
+            html += '<tr>';
+            cells.forEach(cell => {
+              html += `<td>${cell}</td>`;
+            });
+            html += '</tr>\n';
+          });
+          
+          html += '</tbody>\n</table>\n';
+          return html;
+        },
+        copyTablesTSV() {
+          // Copy tables as TSV for CMS that strip HTML tables
+          if (!this.simpleData.structuredAsset) return;
+          
+          const lines = this.simpleData.structuredAsset.trim().split('\n');
+          const tsv = lines.map(line => {
+            // Convert markdown or any format to TSV
+            return line.split(/\||	/).map(c => c.trim()).filter(c => c && c !== '-').join('\t');
+          }).filter(l => l).join('\n');
+          
+          navigator.clipboard.writeText(tsv).then(() => {
+            alert(`✓ TABLES COPIED AS TSV!\n\nPaste into Excel, Google Sheets, or your CMS.\nColumns are separated by tabs.`);
+          });
+        },
+        copyConnectorScript() {
+          const script = `<!-- Croutons Universal Connector - Add this once to your site <head> -->
+<script>
+(function() {
+  // Find Croutons payload in article
+  const payload = document.querySelector('[data-croutons-payload]');
+  if (!payload) return;
+  
+  try {
+    const data = JSON.parse(payload.getAttribute('data-croutons-payload'));
+    
+    // Inject JSON-LD
+    fetch(data.artifacts.jsonld_url)
+      .then(r => r.json())
+      .then(jsonld => {
+        const script = document.createElement('script');
+        script.type = 'application/ld+json';
+        script.textContent = JSON.stringify(jsonld);
+        document.head.appendChild(script);
+      });
+    
+    // Inject alternate link
+    const link = document.createElement('link');
+    link.rel = 'alternate';
+    link.type = 'text/markdown';
+    link.href = data.artifacts.markdown_url;
+    document.head.appendChild(link);
+    
+    // Inject meta tags
+    const hashMeta = document.createElement('meta');
+    hashMeta.name = 'croutons-hash';
+    hashMeta.content = data.hash;
+    document.head.appendChild(hashMeta);
+    
+    const scoreMeta = document.createElement('meta');
+    scoreMeta.name = 'croutons-score';
+    scoreMeta.content = data.score;
+    document.head.appendChild(scoreMeta);
+    
+    console.log('[Croutons] LLM-ready layers injected. Score:', data.score);
+  } catch (err) {
+    console.error('[Croutons] Failed to inject layers:', err);
+  }
+})();
+</script>`;
+          
+          navigator.clipboard.writeText(script).then(() => {
+            alert(`✓ CONNECTOR SCRIPT COPIED!\n\nAdd this once to your site's <head> section.\n\nIt will automatically make all pasted Croutons articles LLM-ready by injecting JSON-LD, alternate links, and meta tags.`);
+          });
         },
         copyArticle(format = 'html') {
           let article = '';
