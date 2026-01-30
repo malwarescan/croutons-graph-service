@@ -1210,9 +1210,6 @@ app.get("/docs", (_req, res) =>
 app.get("/studio", (_req, res) =>
   res.sendFile(path.join(__dirname, "public", "studio.html"))
 );
-app.get("/writer", (_req, res) =>
-  res.sendFile(path.join(__dirname, "public", "writer.html"))
-);
 app.get("/", (_req, res) => res.redirect("/dashboard"));
 
 // ===== Static Files =====
