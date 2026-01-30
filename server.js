@@ -1187,6 +1187,9 @@ app.get("/api/source-stats", apiLimiter, async (req, res) => {
 // ===== Studio API (Page Compliance Studio) =====
 const studio = require('./src/studio/api');
 
+// Croutonizer (semantic compiler)
+const croutonizer = require('./src/croutonizer/api');
+
 // Studio routes (require API key auth)
 app.get('/studio/templates', studio.requireStudioAuth, studio.getTemplates);
 app.get('/studio/pages', studio.requireStudioAuth, studio.listPages);
@@ -1195,6 +1198,8 @@ app.get('/studio/pages/:id', studio.requireStudioAuth, studio.getPage);
 app.put('/studio/pages/:id/sections', studio.requireStudioAuth, studio.updateSections);
 app.put('/studio/pages/:id/facts', studio.requireStudioAuth, studio.updateFacts);
 app.post('/studio/pages/:id/extract-facts', studio.requireStudioAuth, studio.extractFactsFromContent);
+app.post('/studio/pages/:id/croutonize', studio.requireStudioAuth, croutonizer.croutonizePage);
+app.post('/studio/pages/:id/apply-fix/:issue_id', studio.requireStudioAuth, croutonizer.applyFix);
 app.post('/studio/pages/:id/generate', studio.requireStudioAuth, studio.generateArtifacts);
 app.get('/studio/pages/:id/compliance', studio.requireStudioAuth, studio.getCompliance);
 app.get('/studio/pages/:id/artifacts/:type', studio.requireStudioAuth, studio.getArtifact);

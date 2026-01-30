@@ -147,14 +147,20 @@
           </div>
         </div>
 
-        <!-- LLM READINESS SCORE -->
+        <!-- CROUTONIZER SCORE -->
         <div class="bg-gradient-to-r from-[#00C2FF] to-[#0A0A0A] text-white p-8 rounded-lg text-center mb-6">
-          <div class="text-sm font-bold uppercase tracking-wider mb-2">LLM Readiness Score</div>
-          <div class="text-6xl font-bold mb-2">{{ Math.round((checklistScore / 12) * 100) }}%</div>
+          <div class="text-sm font-bold uppercase tracking-wider mb-2">
+            {{ croutonizerScore.total ? 'Croutonizer Score' : 'LLM Readiness Score' }}
+          </div>
+          <div class="text-6xl font-bold mb-2">{{ croutonizerScore.total || Math.round((checklistScore / 12) * 100) }}%</div>
           <div class="text-sm opacity-90">
-            {{ Math.round((checklistScore / 12) * 100) >= 80 ? '✅ Excellent - Ready for AI Citations!' : 
-               Math.round((checklistScore / 12) * 100) >= 65 ? '✓ Good - Minor improvements needed' : 
-               '⚠️ Needs work - Complete more checklist items' }}
+            {{ getScoreStatus(croutonizerScore.total || Math.round((checklistScore / 12) * 100)) }}
+          </div>
+          <div v-if="croutonizerScore.status" class="mt-2 text-xs opacity-80">
+            Status: {{ croutonizerScore.status.toUpperCase() }}
+            <span v-if="croutonizerScore.blocking_issues > 0" class="ml-2">
+              ⚠️ {{ croutonizerScore.blocking_issues }} blocking issues
+            </span>
           </div>
           <div class="mt-4 pt-4 border-t border-white/20 flex justify-around text-xs">
             <div>
@@ -169,6 +175,39 @@
               <div class="font-bold text-2xl">{{ simpleData.sections.length }}</div>
               <div class="opacity-75">Sections</div>
             </div>
+          </div>
+          <button @click="runCroutonizer" 
+                  :disabled="croutonizing"
+                  class="mt-4 px-6 py-2 bg-white text-[#0A0A0A] font-bold rounded hover:bg-gray-100 disabled:opacity-50">
+            {{ croutonizing ? '⚙️ Analyzing...' : '🔍 Run Semantic Compiler' }}
+          </button>
+        </div>
+
+        <!-- CROUTONIZER ISSUES -->
+        <div v-if="croutonizerIssues.length > 0" class="bg-white border-2 border-[#FF3B30] p-6 mb-6">
+          <h3 class="text-xl font-bold text-[#0A0A0A] mb-4">
+            🔧 {{ croutonizerIssues.length }} Issues Found
+          </h3>
+          <div v-for="issue in croutonizerIssues.slice(0, 5)" :key="issue.id" 
+               class="mb-4 p-4 border-l-4 bg-gray-50"
+               :class="issue.type === 'error' ? 'border-red-600' : 'border-yellow-500'">
+            <div class="flex items-start justify-between">
+              <div class="flex-1">
+                <div class="font-bold text-sm mb-1">
+                  {{ issue.type === 'error' ? '❌' : '⚠️' }} {{ issue.message }}
+                </div>
+                <div class="text-xs text-gray-600 mb-2">{{ issue.explanation }}</div>
+                <div v-if="issue.fix" class="text-xs text-blue-600 mt-2">
+                  💡 {{ issue.fix.suggestion || issue.fix.instructions }}
+                </div>
+              </div>
+              <div class="ml-4 text-sm font-bold text-green-600">
+                +{{ Math.abs(issue.score_impact) }} pts
+              </div>
+            </div>
+          </div>
+          <div v-if="croutonizerIssues.length > 5" class="text-sm text-gray-600 text-center mt-4">
+            ...and {{ croutonizerIssues.length - 5 }} more issues
           </div>
         </div>
 
@@ -494,6 +533,9 @@
           saving: false,
           extracting: false,
           extractedFactsCount: 0,
+          croutonizing: false,
+          croutonizerScore: {},
+          croutonizerIssues: [],
           pages: [],
           currentPage: { domain: 'croutons.ai', path: '', page_type: 'blog' },
           simpleData: {
@@ -557,6 +599,51 @@
         }
       },
       methods: {
+        getScoreStatus(score) {
+          if (score >= 80) return '✅ Excellent - Ready for AI Citations!';
+          if (score >= 65) return '✓ Good - Minor improvements needed';
+          if (score >= 40) return '⚠️ Fair - Needs work';
+          return '❌ Poor - Major improvements needed';
+        },
+        async runCroutonizer() {
+          if (!this.currentPage.id) {
+            alert('Save the page first');
+            return;
+          }
+          
+          this.croutonizing = true;
+          
+          try {
+            const res = await fetch(`/studio/pages/${this.currentPage.id}/croutonize`, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'x-studio-key': this.apiKey
+              },
+              body: JSON.stringify({
+                title: this.simpleData.title,
+                answerBox: this.simpleData.answerBox,
+                sections: this.simpleData.sections,
+                keyFacts: this.simpleData.keyFacts
+              })
+            });
+            
+            if (!res.ok) throw new Error('Croutonizer failed');
+            
+            const data = await res.json();
+            
+            this.croutonizerScore = data.score;
+            this.croutonizerIssues = data.issues || [];
+            
+            alert(`✅ Croutonizer Score: ${data.score.total}%\n\nFound ${data.issues.length} issues`);
+            
+          } catch (error) {
+            console.error('Croutonizer error:', error);
+            alert('Failed to run Croutonizer: ' + error.message);
+          } finally {
+            this.croutonizing = false;
+          }
+        },
         setApiKey() {
           if (this.apiKeyInput) {
             this.apiKey = this.apiKeyInput;
