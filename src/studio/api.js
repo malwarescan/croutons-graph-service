@@ -7,6 +7,7 @@ const { getTemplate, getAllTemplates } = require('./templates');
 const { generateFactId, generateContentHash } = require('./hashing');
 const { generateMarkdown, generateNDJSON, generateJSONLD, generateHeadSnippet } = require('./generators');
 const { generateComplianceReport } = require('./compliance');
+const { extractFacts } = require('./fact-extractor');
 
 /**
  * Auth middleware - Require STUDIO_API_KEY
@@ -577,6 +578,61 @@ function getTemplates(req, res) {
 }
 
 /**
+ * POST /studio/pages/:id/extract-facts - AI-powered fact extraction
+ */
+async function extractFactsFromContent(req, res) {
+  try {
+    const { id } = req.params;
+    
+    // Fetch page data
+    const pageResult = await pool.query('SELECT * FROM studio_pages WHERE id = $1', [id]);
+    if (pageResult.rows.length === 0) {
+      return res.status(404).json({ ok: false, error: 'Page not found' });
+    }
+    
+    const page = pageResult.rows[0];
+    
+    // Fetch sections
+    const sectionsResult = await pool.query(
+      'SELECT * FROM studio_sections WHERE page_id = $1 ORDER BY order_index',
+      [id]
+    );
+    
+    // Build content object for extraction
+    const content = {
+      title: page.title,
+      thesis: req.body.thesis || '',
+      answerBox: req.body.answerBox || '',
+      sections: sectionsResult.rows.map(s => ({
+        heading: s.heading,
+        content: s.narrative_md || ''
+      }))
+    };
+    
+    // Extract facts using AI
+    const extractedFacts = await extractFacts(content);
+    
+    res.json({
+      ok: true,
+      page_id: id,
+      facts: extractedFacts,
+      count: extractedFacts.length,
+      message: `Extracted ${extractedFacts.length} atomic facts from narrative content`
+    });
+    
+  } catch (error) {
+    console.error('[studio/pages/:id/extract-facts] Error:', error);
+    res.status(500).json({ 
+      ok: false, 
+      error: error.message,
+      hint: error.message.includes('OPENAI_API_KEY') 
+        ? 'Configure OPENAI_API_KEY in environment variables' 
+        : 'Check server logs for details'
+    });
+  }
+}
+
+/**
  * DELETE /studio/pages/:id - Delete page and all related data
  */
 async function deletePage(req, res) {
@@ -607,6 +663,7 @@ module.exports = {
   getPage,
   updateSections,
   updateFacts,
+  extractFactsFromContent,
   generateArtifacts,
   getCompliance,
   getArtifact,

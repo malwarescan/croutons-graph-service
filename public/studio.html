@@ -205,6 +205,19 @@
             <p class="text-xs text-[#6B6B6B] mb-3">
               One fact per line. No pronouns. Format: "X is Y" / "X causes Y by Z" / "X requires Y when Z"
             </p>
+            
+            <!-- AI Extract Button -->
+            <div class="mb-3 flex gap-2">
+              <button @click="extractFactsAI" 
+                      :disabled="extracting || !currentPage.id"
+                      class="px-4 py-2 bg-[#00C2FF] text-[#0A0A0A] border-2 border-[#00C2FF] font-medium text-sm disabled:opacity-50 disabled:cursor-not-allowed">
+                {{ extracting ? '🤖 Extracting Facts...' : '🤖 Extract Facts from Narrative' }}
+              </button>
+              <span v-if="extractedFactsCount > 0" class="text-xs text-[#25D366] self-center">
+                ✓ {{ extractedFactsCount }} facts extracted
+              </span>
+            </div>
+            
             <textarea v-model="simpleData.keyFacts" 
                       placeholder="Entity X defines a stable identifier for disambiguation.&#10;Comparison tables require at least three columns to preserve context.&#10;Evidence-based identity reduces ambiguity in entity matching by 40%."
                       rows="10"
@@ -447,6 +460,8 @@
           editorMode: 'simple', // simple, advanced
           loading: false,
           saving: false,
+          extracting: false,
+          extractedFactsCount: 0,
           pages: [],
           currentPage: { domain: 'croutons.ai', path: '', page_type: 'blog' },
           simpleData: {
@@ -660,6 +675,60 @@
             alert('Error saving page: ' + err.message);
           }
           this.saving = false;
+        },
+        async extractFactsAI() {
+          if (!this.currentPage.id) {
+            alert('Save the page first before extracting facts.');
+            return;
+          }
+
+          this.extracting = true;
+          this.extractedFactsCount = 0;
+
+          try {
+            const res = await fetch(`/studio/pages/${this.currentPage.id}/extract-facts`, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'x-studio-key': this.apiKey
+              },
+              body: JSON.stringify({
+                thesis: this.simpleData.thesis,
+                answerBox: this.simpleData.answerBox
+              })
+            });
+
+            if (!res.ok) {
+              const error = await res.json();
+              throw new Error(error.error || 'Failed to extract facts');
+            }
+
+            const data = await res.json();
+            
+            if (data.facts && data.facts.length > 0) {
+              // Convert extracted facts to simple line format
+              const factLines = data.facts.map(f => 
+                `${f.subject} ${f.predicate} ${f.object}`
+              );
+              
+              // Append to existing facts or replace if empty
+              if (this.simpleData.keyFacts.trim()) {
+                this.simpleData.keyFacts += '\n' + factLines.join('\n');
+              } else {
+                this.simpleData.keyFacts = factLines.join('\n');
+              }
+              
+              this.extractedFactsCount = data.facts.length;
+              alert(`✓ Extracted ${data.facts.length} atomic facts from your narrative!\n\nReview and edit them as needed.`);
+            } else {
+              alert('No facts were extracted. Try adding more detailed narrative content.');
+            }
+          } catch (err) {
+            console.error('Extract facts error:', err);
+            alert('Error extracting facts: ' + err.message + '\n\nMake sure OPENAI_API_KEY is configured on the server.');
+          } finally {
+            this.extracting = false;
+          }
         },
         async generateArtifacts() {
           if (!this.currentPage.id) {

@@ -1194,6 +1194,7 @@ app.post('/studio/pages', studio.requireStudioAuth, studio.createPage);
 app.get('/studio/pages/:id', studio.requireStudioAuth, studio.getPage);
 app.put('/studio/pages/:id/sections', studio.requireStudioAuth, studio.updateSections);
 app.put('/studio/pages/:id/facts', studio.requireStudioAuth, studio.updateFacts);
+app.post('/studio/pages/:id/extract-facts', studio.requireStudioAuth, studio.extractFactsFromContent);
 app.post('/studio/pages/:id/generate', studio.requireStudioAuth, studio.generateArtifacts);
 app.get('/studio/pages/:id/compliance', studio.requireStudioAuth, studio.getCompliance);
 app.get('/studio/pages/:id/artifacts/:type', studio.requireStudioAuth, studio.getArtifact);
