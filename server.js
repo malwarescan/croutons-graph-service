@@ -1199,12 +1199,30 @@ app.use(
   })
 );
 
+// ===== Studio API (Page Compliance Studio) =====
+const studio = require('./src/studio/api');
+
+// Studio routes (require API key auth)
+app.get('/studio/templates', studio.requireStudioAuth, studio.getTemplates);
+app.get('/studio/pages', studio.requireStudioAuth, studio.listPages);
+app.post('/studio/pages', studio.requireStudioAuth, studio.createPage);
+app.get('/studio/pages/:id', studio.requireStudioAuth, studio.getPage);
+app.put('/studio/pages/:id/sections', studio.requireStudioAuth, studio.updateSections);
+app.put('/studio/pages/:id/facts', studio.requireStudioAuth, studio.updateFacts);
+app.post('/studio/pages/:id/generate', studio.requireStudioAuth, studio.generateArtifacts);
+app.get('/studio/pages/:id/compliance', studio.requireStudioAuth, studio.getCompliance);
+app.get('/studio/pages/:id/artifacts/:type', studio.requireStudioAuth, studio.getArtifact);
+app.delete('/studio/pages/:id', studio.requireStudioAuth, studio.deletePage);
+
 // ===== Admin Pages =====
 app.get("/dashboard", (_req, res) =>
   res.sendFile(path.join(__dirname, "public", "dashboard.html"))
 );
 app.get("/docs", (_req, res) =>
   res.sendFile(path.join(__dirname, "public", "docs.html"))
+);
+app.get("/studio", (_req, res) =>
+  res.sendFile(path.join(__dirname, "public", "studio.html"))
 );
 app.get("/", (_req, res) => res.redirect("/dashboard"));
 
