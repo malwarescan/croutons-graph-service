@@ -8,6 +8,7 @@ const { generateFactId, generateContentHash } = require('./hashing');
 const { generateMarkdown, generateNDJSON, generateJSONLD, generateHeadSnippet } = require('./generators');
 const { generateComplianceReport } = require('./compliance');
 const { extractFacts } = require('./fact-extractor');
+const { generateFullContent } = require('./content-generator');
 
 /**
  * Auth middleware - Require STUDIO_API_KEY
@@ -633,6 +634,46 @@ async function extractFactsFromContent(req, res) {
 }
 
 /**
+ * POST /studio/generate-content - Generate full page content from topic + context
+ */
+async function generateContent(req, res) {
+  try {
+    const { topic, context, contentType } = req.body;
+    
+    if (!topic) {
+      return res.status(400).json({ 
+        ok: false, 
+        error: 'Topic is required' 
+      });
+    }
+    
+    console.log(`[studio/generate-content] Generating content for: ${topic}`);
+    
+    const content = await generateFullContent({
+      topic,
+      context: context || '',
+      contentType: contentType || 'blog'
+    });
+    
+    res.json({
+      ok: true,
+      content,
+      message: 'Content generated successfully'
+    });
+    
+  } catch (error) {
+    console.error('[studio/generate-content] Error:', error);
+    res.status(500).json({ 
+      ok: false, 
+      error: error.message,
+      hint: error.message.includes('OPENAI_API_KEY') 
+        ? 'Configure OPENAI_API_KEY in environment variables' 
+        : 'Check server logs for details'
+    });
+  }
+}
+
+/**
  * DELETE /studio/pages/:id - Delete page and all related data
  */
 async function deletePage(req, res) {
@@ -664,6 +705,7 @@ module.exports = {
   updateSections,
   updateFacts,
   extractFactsFromContent,
+  generateContent,
   generateArtifacts,
   getCompliance,
   getArtifact,

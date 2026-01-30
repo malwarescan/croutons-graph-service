@@ -1198,6 +1198,7 @@ app.get('/studio/pages/:id', studio.requireStudioAuth, studio.getPage);
 app.put('/studio/pages/:id/sections', studio.requireStudioAuth, studio.updateSections);
 app.put('/studio/pages/:id/facts', studio.requireStudioAuth, studio.updateFacts);
 app.post('/studio/pages/:id/extract-facts', studio.requireStudioAuth, studio.extractFactsFromContent);
+app.post('/studio/generate-content', studio.requireStudioAuth, studio.generateContent);
 app.post('/studio/pages/:id/croutonize', studio.requireStudioAuth, croutonizer.croutonizePage);
 app.post('/studio/pages/:id/apply-fix/:issue_id', studio.requireStudioAuth, croutonizer.applyFix);
 app.post('/studio/pages/:id/generate', studio.requireStudioAuth, studio.generateArtifacts);
