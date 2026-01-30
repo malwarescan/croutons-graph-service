@@ -662,10 +662,20 @@
         },
         async loadPages() {
           this.loading = true;
+          console.log('[loadPages] Starting to load pages...');
+          
           try {
+            // Add 10 second timeout
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 10000);
+            
             const res = await fetch('/studio/pages', {
-              headers: { 'x-studio-key': this.apiKey }
+              headers: { 'x-studio-key': this.apiKey },
+              signal: controller.signal
             });
+            
+            clearTimeout(timeoutId);
+            console.log('[loadPages] Response status:', res.status);
             
             if (!res.ok) {
               // If 401, clear invalid key and show login screen
@@ -674,26 +684,46 @@
                 localStorage.removeItem('studio_api_key');
                 this.apiKey = '';
                 this.apiKeyInput = '';
-                alert('Invalid API key. Please enter the correct key.');
                 this.loading = false;
+                alert('Invalid API key. Please enter the correct key.');
                 return;
               }
               
               const error = await res.json().catch(() => ({ error: 'Unknown error' }));
               console.error('Load pages failed:', error);
-              alert('Failed to load pages: ' + error.error);
               this.pages = [];
               this.loading = false;
+              alert('Failed to load pages: ' + error.error);
               return;
             }
             
-            this.pages = await res.json();
+            const data = await res.json();
+            console.log('[loadPages] API response:', data);
+            
+            // Handle both array format and {ok, data} format
+            if (Array.isArray(data)) {
+              this.pages = data;
+            } else if (data.data && Array.isArray(data.data)) {
+              this.pages = data.data;
+            } else if (data.ok && data.data) {
+              this.pages = data.data;
+            } else {
+              this.pages = [];
+            }
+            
+            console.log('[loadPages] Loaded pages count:', this.pages.length);
+            this.loading = false;
           } catch (err) {
             console.error('Load pages error:', err);
-            alert('Error loading pages: ' + err.message);
+            this.loading = false;
             this.pages = [];
+            
+            if (err.name === 'AbortError') {
+              alert('Loading pages timed out. Please refresh and try again.');
+            } else {
+              alert('Error loading pages: ' + err.message);
+            }
           }
-          this.loading = false;
         },
         startNewPage() {
           this.currentPage = { 
