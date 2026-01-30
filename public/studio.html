@@ -156,98 +156,32 @@
       <!-- Simple Mode (Content Writers) -->
       <div v-if="editorMode==='simple'" class="space-y-6">
         
-        <!-- AI CONTENT GENERATOR (WIZARD MODE) -->
-        <div class="bg-gradient-to-br from-[#00C2FF] to-[#0099CC] border-4 border-[#0A0A0A] p-8 shadow-[12px_12px_0px_0px_rgba(10,10,10,0.2)]">
-          <div class="flex items-start justify-between mb-4">
-            <div>
-              <h2 class="text-2xl font-bold text-[#0A0A0A] mb-2">AI CONTENT GENERATOR</h2>
-              <p class="text-sm text-[#0A0A0A] opacity-80">
-                Let AI write your entire page. Just describe what you want, select from suggestions, done.
-              </p>
+        <!-- AI GENERATOR INLINE -->
+        <div class="bg-white border-2 border-[#0A0A0A] p-6 neo-card-sm">
+          <div class="mb-6 p-4 bg-[#00C2FF] bg-opacity-10 border-l-4 border-[#00C2FF]">
+            <h2 class="text-lg font-bold mb-2">AI GENERATE FROM TOPIC</h2>
+            <p class="text-sm text-[#6B6B6B] mb-4">Enter a topic below and AI will fill out all fields automatically. Or skip and fill manually.</p>
+            
+            <div class="space-y-3">
+              <input v-model="aiPrompt.topic" 
+                     placeholder="Topic: e.g., How to verify business identity with LLMs"
+                     class="w-full border-2 border-[#0A0A0A] px-4 py-2">
+              
+              <textarea v-model="aiPrompt.context" 
+                        placeholder="Additional context (optional): Target audience, specific things to mention, etc."
+                        rows="2"
+                        class="w-full border-2 border-[#0A0A0A] px-4 py-2"></textarea>
+              
+              <div class="flex gap-3">
+                <button @click="generateAndApply" 
+                        :disabled="generating || !aiPrompt.topic"
+                        class="flex-1 px-6 py-3 bg-[#00C2FF] text-[#0A0A0A] border-2 border-[#00C2FF] font-bold uppercase disabled:opacity-50 btn-primary">
+                  {{ generating ? 'GENERATING...' : 'GENERATE & FILL FORM' }}
+                </button>
+              </div>
             </div>
-            <button @click="showAIWizard = !showAIWizard" 
-                    class="px-4 py-2 bg-white text-[#0A0A0A] border-2 border-[#0A0A0A] font-medium text-sm">
-              {{ showAIWizard ? 'Hide' : 'Show' }}
-            </button>
           </div>
           
-          <div v-if="showAIWizard" class="space-y-4">
-            <!-- Input Fields -->
-            <div class="bg-white border-2 border-[#0A0A0A] p-6">
-              <label class="block text-sm font-bold mb-2 text-[#0A0A0A]">1. What's your topic?</label>
-              <input v-model="aiPrompt.topic" 
-                     placeholder="e.g., How to verify business identity with LLMs"
-                     class="w-full border-2 border-[#0A0A0A] px-4 py-3 mb-4 text-[#0A0A0A]">
-              
-              <label class="block text-sm font-bold mb-2 text-[#0A0A0A]">2. Anything specific to include? (optional)</label>
-              <textarea v-model="aiPrompt.context" 
-                        placeholder="e.g., Must mention real-time verification, API endpoints, and schema.org. Target audience: developers."
-                        rows="3"
-                        class="w-full border-2 border-[#0A0A0A] px-4 py-3 mb-4 text-[#0A0A0A]"></textarea>
-              
-              <label class="block text-sm font-bold mb-2 text-[#0A0A0A]">3. Content type:</label>
-              <select v-model="aiPrompt.contentType" 
-                      class="w-full border-2 border-[#0A0A0A] px-4 py-3 mb-6 text-[#0A0A0A]">
-                <option value="blog">Blog Post / Article</option>
-                <option value="landing">Landing Page</option>
-                <option value="product">Product Page</option>
-                <option value="how-to">How-To Guide</option>
-                <option value="technical">Technical Documentation</option>
-              </select>
-              
-              <button @click="generateContentAI" 
-                      :disabled="generating || !aiPrompt.topic"
-                      class="w-full px-8 py-4 bg-[#0A0A0A] text-white font-bold uppercase tracking-wide disabled:opacity-50 disabled:cursor-not-allowed btn-secondary">
-                {{ generating ? 'GENERATING CONTENT...' : 'GENERATE FULL PAGE' }}
-              </button>
-            </div>
-            
-            <!-- AI Generated Preview -->
-            <div v-if="aiGenerated.title" class="bg-white border-2 border-[#10B981] p-6">
-              <div class="flex items-center justify-between mb-4">
-                <h3 class="text-xl font-bold text-[#10B981]">GENERATED CONTENT PREVIEW</h3>
-                <div class="flex gap-2">
-                  <button @click="applyAIContent" 
-                          class="px-6 py-2 bg-[#10B981] text-white font-bold uppercase text-sm btn-primary">
-                    USE THIS
-                  </button>
-                  <button @click="aiGenerated = {}" 
-                          class="px-6 py-2 bg-[#E5E5E5] text-[#0A0A0A] font-medium text-sm border-2 border-[#0A0A0A]">
-                    Regenerate
-                  </button>
-                </div>
-              </div>
-              
-              <div class="space-y-3 text-sm max-h-96 overflow-y-auto">
-                <div class="border-l-4 border-[#00C2FF] pl-4">
-                  <div class="font-bold text-xs text-[#6B6B6B] uppercase mb-1">Title</div>
-                  <div class="text-[#0A0A0A]">{{ aiGenerated.title }}</div>
-                </div>
-                <div class="border-l-4 border-[#00C2FF] pl-4">
-                  <div class="font-bold text-xs text-[#6B6B6B] uppercase mb-1">Answer Box ({{ aiGenerated.answerBox?.split(' ').length }} words)</div>
-                  <div class="text-[#0A0A0A]">{{ aiGenerated.answerBox }}</div>
-                </div>
-                <div class="border-l-4 border-[#00C2FF] pl-4">
-                  <div class="font-bold text-xs text-[#6B6B6B] uppercase mb-1">Key Facts ({{ aiGenerated.keyFacts?.split('\n').filter(l => l.trim()).length }} facts)</div>
-                  <div class="text-[#0A0A0A] font-mono text-xs whitespace-pre-wrap">{{ aiGenerated.keyFacts }}</div>
-                </div>
-                <div class="border-l-4 border-[#00C2FF] pl-4">
-                  <div class="font-bold text-xs text-[#6B6B6B] uppercase mb-1">Sections ({{ aiGenerated.sections?.length }})</div>
-                  <div v-for="(sec, i) in aiGenerated.sections" :key="i" class="mb-2">
-                    <div class="font-bold text-xs">{{ sec.heading }}</div>
-                    <div class="text-xs text-[#6B6B6B]">{{ sec.content?.substring(0, 100) }}...</div>
-                  </div>
-                </div>
-                <div class="text-xs text-[#6B6B6B] mt-4">
-                  + FAQ, structured assets, implications, and more... (click "USE THIS" to see full content)
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-        
-        <!-- Page Info -->
-        <div class="bg-white border-2 border-[#0A0A0A] p-6 neo-card-sm">
           <h2 class="text-xl font-bold mb-4">Page Details</h2>
           <div class="grid md:grid-cols-2 gap-4">
             <div>
@@ -666,13 +600,11 @@
           croutonizerScore: {},
           croutonizerIssues: [],
           generating: false,
-          showAIWizard: true,
           aiPrompt: {
             topic: '',
             context: '',
             contentType: 'blog'
           },
-          aiGenerated: {},
           pages: [],
           currentPage: { domain: 'croutons.ai', path: '', page_type: 'blog' },
           simpleData: {
@@ -952,14 +884,13 @@
           }
           this.saving = false;
         },
-        async generateContentAI() {
+        async generateAndApply() {
           if (!this.aiPrompt.topic) {
             alert('Please enter a topic first.');
             return;
           }
 
           this.generating = true;
-          this.aiGenerated = {};
 
           try {
             const res = await fetch('/studio/generate-content', {
@@ -971,7 +902,7 @@
               body: JSON.stringify({
                 topic: this.aiPrompt.topic,
                 context: this.aiPrompt.context,
-                contentType: this.aiPrompt.contentType
+                contentType: this.aiPrompt.contentType || 'blog'
               })
             });
 
@@ -981,100 +912,54 @@
             }
 
             const data = await res.json();
-            console.log('[generateContentAI] Received from API:', data);
+            console.log('[generateAndApply] Received:', data);
             
             if (!data.content) {
               throw new Error('No content received from API');
             }
             
-            this.aiGenerated = data.content;
-            console.log('[generateContentAI] aiGenerated set to:', this.aiGenerated);
+            const generated = data.content;
             
-            // Verify all expected fields are present
-            const missingFields = [];
-            ['title', 'thesis', 'answerBox', 'keyFacts', 'sections', 'faq'].forEach(field => {
-              if (!this.aiGenerated[field]) {
-                missingFields.push(field);
-              }
-            });
+            // Apply directly to form (no preview step)
+            this.simpleData.title = generated.title || '';
+            this.simpleData.thesis = generated.thesis || '';
+            this.simpleData.answerBox = generated.answerBox || '';
+            this.simpleData.keyFacts = generated.keyFacts || '';
+            this.simpleData.sections = generated.sections ? [...generated.sections] : [];
+            this.simpleData.structuredAsset = generated.structuredAsset || '';
+            this.simpleData.implications = generated.implications || '';
+            this.simpleData.nextActions = generated.nextActions || '';
+            this.simpleData.first30Min = generated.first30Min || '';
+            this.simpleData.relatedResources = generated.relatedResources || '';
+            this.simpleData.faq = generated.faq ? [...generated.faq] : [];
             
-            if (missingFields.length > 0) {
-              console.warn('[generateContentAI] Missing fields:', missingFields);
+            // Update page type
+            this.currentPage.page_type = this.aiPrompt.contentType || 'blog';
+            
+            // Suggest path from title
+            if (generated.title && this.currentPage.path === '/blog/untitled') {
+              const slug = generated.title
+                .toLowerCase()
+                .replace(/[^a-z0-9]+/g, '-')
+                .replace(/^-|-$/g, '');
+              this.currentPage.path = `/blog/${slug}`;
             }
             
-            // Scroll to preview
+            console.log('[generateAndApply] Form populated');
+            
+            alert('Content generated and form filled. Review and edit as needed, then save.');
+            
+            // Scroll to show the filled form
             setTimeout(() => {
-              document.querySelector('.border-\\[\\#10B981\\]')?.scrollIntoView({ 
-                behavior: 'smooth', 
-                block: 'center' 
-              });
+              window.scrollTo({ top: 300, behavior: 'smooth' });
             }, 100);
             
           } catch (err) {
-            console.error('Generate content error:', err);
+            console.error('Generate error:', err);
             alert('Error generating content: ' + err.message + '\n\nMake sure OPENAI_API_KEY is configured on the server.');
           } finally {
             this.generating = false;
           }
-        },
-        applyAIContent() {
-          console.log('[applyAIContent] Starting to apply content...', this.aiGenerated);
-          
-          // Apply all AI-generated content to the form with proper reactivity
-          this.simpleData.title = this.aiGenerated.title || '';
-          this.simpleData.thesis = this.aiGenerated.thesis || '';
-          this.simpleData.answerBox = this.aiGenerated.answerBox || '';
-          this.simpleData.keyFacts = this.aiGenerated.keyFacts || '';
-          
-          // Handle sections array (force reactivity)
-          if (this.aiGenerated.sections && Array.isArray(this.aiGenerated.sections)) {
-            this.simpleData.sections = [...this.aiGenerated.sections];
-          } else {
-            this.simpleData.sections = [
-              { heading: '', content: '' },
-              { heading: '', content: '' },
-              { heading: '', content: '' }
-            ];
-          }
-          
-          this.simpleData.structuredAsset = this.aiGenerated.structuredAsset || '';
-          this.simpleData.implications = this.aiGenerated.implications || '';
-          this.simpleData.nextActions = this.aiGenerated.nextActions || '';
-          this.simpleData.first30Min = this.aiGenerated.first30Min || '';
-          this.simpleData.relatedResources = this.aiGenerated.relatedResources || '';
-          
-          // Handle FAQ array (force reactivity)
-          if (this.aiGenerated.faq && Array.isArray(this.aiGenerated.faq)) {
-            this.simpleData.faq = [...this.aiGenerated.faq];
-          } else {
-            this.simpleData.faq = [
-              { question: '', answer: '' },
-              { question: '', answer: '' },
-              { question: '', answer: '' }
-            ];
-          }
-          
-          // Update page type if different
-          this.currentPage.page_type = this.aiPrompt.contentType;
-          
-          // Suggest path based on title
-          if (this.aiGenerated.title && this.currentPage.path === '/blog/untitled') {
-            const slug = this.aiGenerated.title
-              .toLowerCase()
-              .replace(/[^a-z0-9]+/g, '-')
-              .replace(/^-|-$/g, '');
-            this.currentPage.path = `/blog/${slug}`;
-          }
-          
-          console.log('[applyAIContent] Content applied:', this.simpleData);
-          
-          // Close AI wizard and scroll to form
-          this.showAIWizard = false;
-          alert('Content applied! Review and edit as needed, then click "SAVE CONTENT".');
-          
-          setTimeout(() => {
-            window.scrollTo({ top: 400, behavior: 'smooth' });
-          }, 100);
         },
         async extractFactsAI() {
           if (!this.currentPage.id) {
