@@ -668,9 +668,20 @@
             });
             
             if (!res.ok) {
+              // If 401, clear invalid key and show login screen
+              if (res.status === 401) {
+                console.error('API key invalid or missing - showing login screen');
+                localStorage.removeItem('studio_api_key');
+                this.apiKey = '';
+                this.apiKeyInput = '';
+                alert('Invalid API key. Please enter the correct key.');
+                this.loading = false;
+                return;
+              }
+              
               const error = await res.json().catch(() => ({ error: 'Unknown error' }));
               console.error('Load pages failed:', error);
-              alert('Failed to load pages: ' + error.error + '\n\nCheck your API key or try refreshing.');
+              alert('Failed to load pages: ' + error.error);
               this.pages = [];
               this.loading = false;
               return;
@@ -837,6 +848,17 @@
             });
 
             if (!res.ok) {
+              // If 401, clear invalid key and show login screen
+              if (res.status === 401) {
+                console.error('API key invalid - showing login screen');
+                localStorage.removeItem('studio_api_key');
+                this.apiKey = '';
+                this.apiKeyInput = '';
+                this.generating = false;
+                alert('Invalid API key. Please refresh and enter the correct key.');
+                return;
+              }
+              
               const error = await res.json();
               throw new Error(error.error || 'Failed to generate content');
             }
