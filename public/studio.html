@@ -131,7 +131,8 @@
       <div v-else class="grid gap-4">
         <div v-for="page in pages" :key="page.id" 
              @click="editPage(page.id)"
-             class="bg-white border-2 border-[#0A0A0A] p-6 cursor-pointer neo-card">
+             @contextmenu.prevent="showContextMenu($event, page.id)"
+             class="bg-white border-2 border-[#0A0A0A] p-6 cursor-pointer neo-card hover:shadow-[8px_8px_0px_0px_rgba(0,0,0,0.1)] transition-shadow">
           <div class="flex items-start justify-between mb-3">
             <div class="flex-1">
               <h3 class="text-lg font-bold text-[#0A0A0A] mb-1">{{ page.domain }}{{ page.path }}</h3>
@@ -146,6 +147,36 @@
             <span>•</span>
             <span class="font-mono">{{ page.content_hash?.substring(0, 12) || 'No hash' }}</span>
           </div>
+        </div>
+      </div>
+      
+      <!-- Context Menu -->
+      <div v-if="contextMenu.show" 
+           @click="contextMenu.show = false"
+           class="fixed inset-0 z-50">
+        <div :style="{position: 'fixed', left: contextMenu.x + 'px', top: contextMenu.y + 'px'}"
+             @click.stop
+             class="bg-white border-4 border-[#0A0A0A] shadow-[8px_8px_0px_0px_rgba(0,0,0,0.3)] min-w-[200px]">
+          <button @click="contextMenuAction('edit')"
+                  class="w-full px-4 py-3 text-left font-bold hover:bg-[#F3F4F6] border-b-2 border-[#E5E5E5] flex items-center gap-2">
+            <span>📝</span> EDIT
+          </button>
+          <button @click="contextMenuAction('duplicate')"
+                  class="w-full px-4 py-3 text-left font-bold hover:bg-[#F3F4F6] border-b-2 border-[#E5E5E5] flex items-center gap-2">
+            <span>📋</span> DUPLICATE
+          </button>
+          <button @click="contextMenuAction('compliance')"
+                  class="w-full px-4 py-3 text-left font-bold hover:bg-[#F3F4F6] border-b-2 border-[#E5E5E5] flex items-center gap-2">
+            <span>✓</span> VIEW COMPLIANCE
+          </button>
+          <button @click="contextMenuAction('artifacts')"
+                  class="w-full px-4 py-3 text-left font-bold hover:bg-[#F3F4F6] border-b-2 border-[#E5E5E5] flex items-center gap-2">
+            <span>📦</span> VIEW ARTIFACTS
+          </button>
+          <button @click="contextMenuAction('delete')"
+                  class="w-full px-4 py-3 text-left font-bold hover:bg-[#FEE2E2] text-[#EF4444] flex items-center gap-2">
+            <span>🗑</span> DELETE
+          </button>
         </div>
       </div>
     </div>
@@ -667,7 +698,13 @@
             factDensity: { pass: true, score: 100, warnings: [] }
           },
           croutonizerWarnings: [],
-          showAllWarnings: false
+          showAllWarnings: false,
+          contextMenu: {
+            show: false,
+            x: 0,
+            y: 0,
+            pageId: null
+          }
         };
       },
       computed: {
@@ -740,6 +777,11 @@
           this.loadPages();
         }
         this.runCroutonizerChecks();
+        
+        // Close context menu on any click
+        document.addEventListener('click', () => {
+          this.contextMenu.show = false;
+        });
       },
       methods: {
         // ===== CROUTONIZER LIVE GUARDRAILS =====
@@ -955,6 +997,92 @@
               });
               this.runCroutonizerChecks();
               alert('✓ New sections added! Fill them in to improve score.');
+            }
+          }
+        },
+        // ===== CONTEXT MENU =====
+        showContextMenu(event, pageId) {
+          this.contextMenu.show = true;
+          this.contextMenu.x = event.clientX;
+          this.contextMenu.y = event.clientY;
+          this.contextMenu.pageId = pageId;
+        },
+        async contextMenuAction(action) {
+          const pageId = this.contextMenu.pageId;
+          this.contextMenu.show = false;
+          
+          if (action === 'edit') {
+            this.editPage(pageId);
+          }
+          else if (action === 'duplicate') {
+            const original = this.pages.find(p => p.id === pageId);
+            if (!original) return;
+            
+            const confirmDup = confirm(`Duplicate "${original.path}"?`);
+            if (!confirmDup) return;
+            
+            try {
+              const res = await fetch(`/studio/pages/${pageId}`, {
+                headers: { 'x-studio-key': this.apiKey }
+              });
+              if (!res.ok) throw new Error('Failed to load page');
+              const page = await res.json();
+              
+              // Create new page with same content
+              const dupRes = await fetch('/studio/pages', {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                  'x-studio-key': this.apiKey
+                },
+                body: JSON.stringify({
+                  ...page,
+                  id: undefined,
+                  path: page.path + '-copy',
+                  created_at: undefined,
+                  updated_at: undefined
+                })
+              });
+              
+              if (!dupRes.ok) throw new Error('Failed to duplicate');
+              
+              alert('✓ Page duplicated!');
+              this.loadPages();
+            } catch (err) {
+              alert('Error duplicating page: ' + err.message);
+            }
+          }
+          else if (action === 'compliance') {
+            this.editPage(pageId);
+            setTimeout(() => {
+              this.viewCompliance();
+            }, 100);
+          }
+          else if (action === 'artifacts') {
+            this.editPage(pageId);
+            setTimeout(() => {
+              this.generateArtifacts();
+            }, 100);
+          }
+          else if (action === 'delete') {
+            const page = this.pages.find(p => p.id === pageId);
+            if (!page) return;
+            
+            const confirmDel = confirm(`Delete "${page.path}"?\n\nThis cannot be undone.`);
+            if (!confirmDel) return;
+            
+            try {
+              const res = await fetch(`/studio/pages/${pageId}`, {
+                method: 'DELETE',
+                headers: { 'x-studio-key': this.apiKey }
+              });
+              
+              if (!res.ok) throw new Error('Failed to delete');
+              
+              alert('✓ Page deleted.');
+              this.loadPages();
+            } catch (err) {
+              alert('Error deleting page: ' + err.message);
             }
           }
         },
