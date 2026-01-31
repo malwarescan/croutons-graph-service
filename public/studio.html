@@ -399,6 +399,19 @@
                       placeholder="Paste your table, list, rubric, or spec here (markdown/CSV/plain text)"
                       rows="8"
                       class="w-full border-2 border-[#0A0A0A] px-4 py-3 font-mono text-sm"></textarea>
+            
+            <!-- Table Preview (if table format detected) -->
+            <div v-if="simpleData.structuredAsset && (simpleData.structuredAsset.includes('|') || simpleData.structuredAsset.includes('\t'))" 
+                 class="mt-4 border-2 border-[#0A0A0A] p-4 bg-white">
+              <div class="text-xs font-bold text-gray-600 mb-2 uppercase tracking-wide">Preview (Copy-ready table)</div>
+              <div v-html="convertToHTMLTable(simpleData.structuredAsset)" class="overflow-x-auto"></div>
+              <style>
+                table { border-collapse: collapse; width: 100%; margin-top: 8px; }
+                th, td { border: 2px solid #0A0A0A; padding: 8px 12px; text-align: left; }
+                th { background: #F3F4F6; font-weight: bold; }
+                td { background: white; }
+              </style>
+            </div>
           </div>
 
           <!-- 6. What This Means -->
@@ -766,19 +779,23 @@
           let warnings = [];
           const pronouns = /\b(it|this|that|they|them|these|those)\b/gi;
           
-          this.simpleData.sections.forEach(section => {
+          this.simpleData.sections.forEach((section, sIdx) => {
             if (!section.content) return;
             const paragraphs = section.content.split('\n\n');
             paragraphs.forEach((para, pIdx) => {
               const matches = para.match(pronouns);
               if (matches && para.split(/\s+/).length > 20) {
-                const hasEntity = /[A-Z][a-z]+\s+(verification|matching|system|protocol|entity|method)/i.test(para);
+                const hasEntity = /[A-Z][a-z]+\s+(verification|matching|system|protocol|entity|method|redirect|status|code|link|page|URL)/i.test(para);
                 if (!hasEntity) {
                   score -= 10;
                   warnings.push({
                     type: 'Entity Persistence',
                     message: `Section "${section.heading}" para ${pIdx + 1} uses pronouns ambiguously`,
-                    suggestion: 'Replace "it" or "this" with specific entity name'
+                    suggestion: 'Replace "it" or "this" with specific entity name',
+                    fixable: true,
+                    sectionIndex: sIdx,
+                    paragraphIndex: pIdx,
+                    fixAction: 'fix-pronouns'
                   });
                 }
               }
@@ -814,7 +831,9 @@
             warnings.push({
               type: 'Claim-Evidence',
               message: `${unmappedFacts} key facts don't map to section headings`,
-              suggestion: 'Create H2 sections supporting your key facts or add bridging sentences'
+              suggestion: 'Create H2 sections supporting your key facts or add bridging sentences',
+              fixable: true,
+              fixAction: 'add-sections'
             });
           }
           
@@ -878,7 +897,6 @@
             const section = this.simpleData.sections[warning.sectionIndex];
             if (!section) return;
             
-            // Auto-generate query-specific header from topic/content
             const topicWords = this.simpleData.title.split(' ').slice(0, 4).join(' ');
             const newHeader = prompt(
               `Current header: "${section.heading}"\n\nSuggested fix:\n"How ${topicWords} Works"\n\nEnter new header:`,
@@ -889,6 +907,54 @@
               section.heading = newHeader;
               this.runCroutonizerChecks();
               alert('✓ Header updated! Score recalculated.');
+            }
+          }
+          
+          if (warning.fixAction === 'fix-pronouns' && warning.sectionIndex !== undefined && warning.paragraphIndex !== undefined) {
+            const section = this.simpleData.sections[warning.sectionIndex];
+            if (!section) return;
+            
+            const paragraphs = section.content.split('\n\n');
+            const para = paragraphs[warning.paragraphIndex];
+            if (!para) return;
+            
+            // Extract likely entity from section heading or nearby text
+            const suggestedEntity = section.heading.split(' ').slice(0, 3).join(' ');
+            
+            const fixed = prompt(
+              `Ambiguous pronouns found in:\n"${para.substring(0, 100)}..."\n\nReplace "it" or "this" with entity name:`,
+              suggestedEntity
+            );
+            
+            if (fixed) {
+              paragraphs[warning.paragraphIndex] = para.replace(/\b(it|this)\b/gi, fixed);
+              section.content = paragraphs.join('\n\n');
+              this.runCroutonizerChecks();
+              alert('✓ Pronouns fixed! Score recalculated.');
+            }
+          }
+          
+          if (warning.fixAction === 'add-sections') {
+            const unmappedFacts = this.simpleData.keyFacts.split('\n').filter(f => f.trim());
+            const suggestion = unmappedFacts.slice(0, 3).map(f => {
+              const words = f.split(' ').slice(0, 4).join(' ');
+              return `"${words}"`;
+            }).join(', ');
+            
+            const confirm = window.confirm(
+              `Add new sections for unmapped facts?\n\nSuggested sections: ${suggestion}\n\nThis will add empty sections you can fill in.`
+            );
+            
+            if (confirm) {
+              unmappedFacts.slice(0, 3).forEach(fact => {
+                const heading = fact.split(' ').slice(0, 5).join(' ');
+                this.simpleData.sections.push({
+                  heading: `How ${heading} Works`,
+                  content: ''
+                });
+              });
+              this.runCroutonizerChecks();
+              alert('✓ New sections added! Fill them in to improve score.');
             }
           }
         },
